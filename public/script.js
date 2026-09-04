@@ -7,6 +7,14 @@ const mainContent = document.getElementById('main-content');
 // Τρέχουσα συνεδρία: { token, role, username } ή null όταν δεν υπάρχει σύνδεση.
 let session = null;
 
+// Το ενεργό στοιχείο του κύριου μενού. Το κρατάμε ώστε μια αποσύνδεση να
+// ξαναζωγραφίζει αυτό που έβλεπε ο χρήστης, όχι πάντα την οθόνη διαχείρισης.
+let currentMenu = null;
+
+// Κλειδί αποθήκευσης της συνεδρίας. Χρησιμοποιούμε sessionStorage και όχι
+// localStorage, ώστε το token να σβήνεται μόλις κλείσει η καρτέλα.
+const SESSION_KEY = 'delacroix-session';
+
 /* ----------------------------- Βοηθητικά ----------------------------- */
 
 /** Κάνει escape ό,τι μπαίνει σε innerHTML, ώστε τα δεδομένα να μην εκτελούνται ως HTML. */
@@ -36,7 +44,9 @@ async function api(url, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        if (response.status === 401) logout();
+        // Ληγμένο ή άκυρο token: καθαρίζουμε τη συνεδρία, αλλά αφήνουμε τον
+        // caller να δείξει το μήνυμα σφάλματος αντί να αλλάξουμε εμείς οθόνη.
+        if (response.status === 401 && session) logout({ render: false });
         throw new Error(data.message || `Σφάλμα ${response.status}`);
     }
     return data;
@@ -49,6 +59,7 @@ function showError(message) {
 /* --------------------------- Πλοήγηση μενού --------------------------- */
 
 function selectMenu(menu) {
+    currentMenu = menu;
     document.querySelectorAll('.submenu').forEach(submenu => submenu.classList.add('hidden'));
     document.getElementById(`${menu}-menu`)?.classList.remove('hidden');
     updateMainContent(menu);
@@ -355,6 +366,41 @@ function applySession() {
     document.getElementById('session-name').textContent = session?.username ?? '';
 }
 
+/** Αποθηκεύει (ή σβήνει) τη συνεδρία, ώστε να επιβιώνει ενός refresh. */
+function saveSession() {
+    try {
+        if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        else sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+        // Η αποθήκευση μπορεί να είναι απενεργοποιημένη (π.χ. ιδιωτική
+        // περιήγηση). Η εφαρμογή δουλεύει κανονικά, απλώς χωρίς επαναφορά.
+    }
+}
+
+/**
+ * Επαναφέρει τη συνεδρία μετά από refresh. Το token επαληθεύεται στον server,
+ * γιατί οι συνεδρίες ζουν στη μνήμη και χάνονται σε κάθε επανεκκίνησή του.
+ */
+async function restoreSession() {
+    let stored = null;
+    try {
+        stored = sessionStorage.getItem(SESSION_KEY);
+    } catch {
+        return;
+    }
+    if (!stored) return;
+
+    try {
+        session = JSON.parse(stored);
+        const me = await api('/api/me');
+        session = { token: session.token, role: me.role, username: me.username };
+    } catch {
+        session = null;
+    }
+    saveSession();
+    applySession();
+}
+
 async function login(event) {
     event.preventDefault();
     const loginError = document.getElementById('login-error');
@@ -370,8 +416,10 @@ async function login(event) {
         });
 
         session = { token: result.token, role: result.role, username: result.username };
+        saveSession();
         document.getElementById('login-form').reset();
         applySession();
+        currentMenu = 'admin';
         updateMainContent('admin');
     } catch (error) {
         loginError.textContent = error.message;
@@ -379,18 +427,19 @@ async function login(event) {
     }
 }
 
-function logout() {
+function logout({ render = true } = {}) {
     const token = session?.token;
     session = null;
     editing = null;
     formCategory = null;
+    saveSession();
     applySession();
 
     if (token) {
         fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
             .catch(() => { /* η τοπική αποσύνδεση έχει ήδη γίνει */ });
     }
-    updateMainContent('admin');
+    if (render) updateMainContent(currentMenu);
 }
 
 /* ------------------------- Σύνδεση των χειριστών ------------------------- */
@@ -418,6 +467,9 @@ document.querySelectorAll('[data-manage]').forEach(button =>
     }));
 
 document.getElementById('login-form').addEventListener('submit', login);
-document.getElementById('logout-button').addEventListener('click', logout);
+document.getElementById('logout-button').addEventListener('click', () => logout());
+
+document.getElementById('footer-year').textContent = new Date().getFullYear();
 
 applySession();
+restoreSession();

@@ -12,6 +12,9 @@ const DATA_FILES = {
     links: path.join(PUBLIC_DIR, 'links.json')
 };
 
+// Διάρκεια ζωής μιας συνεδρίας χωρίς δραστηριότητα.
+const SESSION_TTL_MS = 30 * 60 * 1000;
+
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 
@@ -35,7 +38,7 @@ const users = [
     }
 ];
 
-// Ενεργές συνεδρίες: token -> { username, role }
+// Ενεργές συνεδρίες: token -> { username, role, expiresAt }
 const sessions = new Map();
 
 function verifyPassword(user, password) {
@@ -48,8 +51,28 @@ function verifyPassword(user, password) {
 function currentUser(req) {
     const header = req.get('authorization') || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-    return token ? sessions.get(token) || null : null;
+    if (!token) return null;
+
+    const session = sessions.get(token);
+    if (!session) return null;
+
+    if (session.expiresAt <= Date.now()) {
+        sessions.delete(token);
+        return null;
+    }
+
+    // Κυλιόμενη λήξη: κάθε έγκυρο αίτημα ανανεώνει τον χρόνο ζωής της συνεδρίας.
+    session.expiresAt = Date.now() + SESSION_TTL_MS;
+    return session;
 }
+
+// Περιοδικός καθαρισμός, ώστε τα ληγμένα tokens να μη συσσωρεύονται στη μνήμη.
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, session] of sessions) {
+        if (session.expiresAt <= now) sessions.delete(token);
+    }
+}, SESSION_TTL_MS).unref();
 
 function requireAdmin(req, res, next) {
     const user = currentUser(req);
@@ -72,8 +95,22 @@ app.post('/api/login', (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, { username: user.username, role: user.role });
+    sessions.set(token, {
+        username: user.username,
+        role: user.role,
+        expiresAt: Date.now() + SESSION_TTL_MS
+    });
     res.json({ success: true, token, role: user.role, username: user.username });
+});
+
+// Επαληθεύει ένα αποθηκευμένο token. Ο client το καλεί μετά από refresh, γιατί
+// οι συνεδρίες ζουν στη μνήμη και χάνονται σε κάθε επανεκκίνηση του server.
+app.get('/api/me', (req, res) => {
+    const user = currentUser(req);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Απαιτείται σύνδεση.' });
+    }
+    res.json({ success: true, username: user.username, role: user.role });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -91,7 +128,26 @@ async function readData(resource) {
 }
 
 async function writeData(resource, data) {
-    await fs.writeFile(DATA_FILES[resource], JSON.stringify(data, null, 2) + '\n', 'utf8');
+    const target = DATA_FILES[resource];
+    const temp = `${target}.tmp`;
+    // Γράφουμε πρώτα σε προσωρινό αρχείο και μετά το μετονομάζουμε: η rename
+    // είναι ατομική, οπότε μια διακοπή στη μέση δεν αφήνει χαλασμένο JSON.
+    await fs.writeFile(temp, JSON.stringify(data, null, 2) + '\n', 'utf8');
+    await fs.rename(temp, target);
+}
+
+/**
+ * Σειριοποιεί τις εγγραφές ανά πόρο. Κάθε mutating endpoint κάνει
+ * read-modify-write: αν δύο έτρεχαν παράλληλα, η δεύτερη εγγραφή θα έσβηνε
+ * την αλλαγή της πρώτης.
+ */
+const writeQueues = new Map();
+
+function withLock(resource, task) {
+    const previous = writeQueues.get(resource) || Promise.resolve();
+    const next = previous.then(task, task);
+    writeQueues.set(resource, next.catch(() => { /* το σφάλμα το χειρίζεται ο caller */ }));
+    return next;
 }
 
 function allItems(data) {
@@ -114,8 +170,21 @@ function findItem(data, id) {
  * Δημιουργεί τα CRUD endpoints για έναν πόρο, ώστε να μην
  * επαναλαμβάνεται ο ίδιος κώδικας για εκθέσεις και συνδέσμους.
  */
-function registerResource(resource, { validate }) {
+function registerResource(resource, { fields, validate }) {
     const base = `/api/${resource}`;
+
+    /**
+     * Κρατά μόνο τα επιτρεπόμενα πεδία της κατηγορίας. Έτσι ο client δεν μπορεί
+     * ούτε να γράψει αυθαίρετα κλειδιά στο JSON, ούτε να πλαστογραφήσει το id
+     * στέλνοντάς το μέσα στο σώμα του αιτήματος.
+     */
+    function sanitize(category, body) {
+        const result = {};
+        for (const key of fields(category)) {
+            if (typeof body[key] === 'string') result[key] = body[key].trim();
+        }
+        return result;
+    }
 
     app.get(base, async (req, res, next) => {
         try {
@@ -127,19 +196,22 @@ function registerResource(resource, { validate }) {
 
     app.post(base, requireAdmin, async (req, res, next) => {
         try {
-            const data = await readData(resource);
-            const { category, ...fields } = req.body || {};
+            await withLock(resource, async () => {
+                const body = req.body || {};
+                const data = await readData(resource);
 
-            if (!Object.prototype.hasOwnProperty.call(data, category)) {
-                return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
-            }
-            const problem = validate(category, fields);
-            if (problem) return res.status(400).json({ success: false, message: problem });
+                if (!Object.prototype.hasOwnProperty.call(data, body.category)) {
+                    return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
+                }
+                const values = sanitize(body.category, body);
+                const problem = validate(body.category, values);
+                if (problem) return res.status(400).json({ success: false, message: problem });
 
-            const item = { id: nextId(data), ...fields };
-            data[category].push(item);
-            await writeData(resource, data);
-            res.status(201).json({ success: true, item });
+                const item = { id: nextId(data), ...values };
+                data[body.category].push(item);
+                await writeData(resource, data);
+                res.status(201).json({ success: true, item });
+            });
         } catch (error) {
             next(error);
         }
@@ -147,30 +219,34 @@ function registerResource(resource, { validate }) {
 
     app.put(`${base}/:id`, requireAdmin, async (req, res, next) => {
         try {
-            const id = Number.parseInt(req.params.id, 10);
-            const data = await readData(resource);
-            const found = findItem(data, id);
-            if (!found) {
-                return res.status(404).json({ success: false, message: 'Δεν βρέθηκε.' });
-            }
+            await withLock(resource, async () => {
+                const body = req.body || {};
+                const id = Number.parseInt(req.params.id, 10);
+                const data = await readData(resource);
+                const found = findItem(data, id);
+                if (!found) {
+                    return res.status(404).json({ success: false, message: 'Δεν βρέθηκε.' });
+                }
 
-            const { category = found.category, ...fields } = req.body || {};
-            if (!Object.prototype.hasOwnProperty.call(data, category)) {
-                return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
-            }
-            const problem = validate(category, fields);
-            if (problem) return res.status(400).json({ success: false, message: problem });
+                const category = body.category ?? found.category;
+                if (!Object.prototype.hasOwnProperty.call(data, category)) {
+                    return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
+                }
+                const values = sanitize(category, body);
+                const problem = validate(category, values);
+                if (problem) return res.status(400).json({ success: false, message: problem });
 
-            const item = { id, ...fields };
-            if (category === found.category) {
-                data[category][found.index] = item;
-            } else {
-                // Μετακίνηση σε άλλη κατηγορία (π.χ. τρέχουσα -> παρελθούσα έκθεση).
-                data[found.category].splice(found.index, 1);
-                data[category].push(item);
-            }
-            await writeData(resource, data);
-            res.json({ success: true, item });
+                const item = { id, ...values };
+                if (category === found.category) {
+                    data[category][found.index] = item;
+                } else {
+                    // Μετακίνηση σε άλλη κατηγορία (π.χ. τρέχουσα -> παρελθούσα έκθεση).
+                    data[found.category].splice(found.index, 1);
+                    data[category].push(item);
+                }
+                await writeData(resource, data);
+                res.json({ success: true, item });
+            });
         } catch (error) {
             next(error);
         }
@@ -178,15 +254,17 @@ function registerResource(resource, { validate }) {
 
     app.delete(`${base}/:id`, requireAdmin, async (req, res, next) => {
         try {
-            const id = Number.parseInt(req.params.id, 10);
-            const data = await readData(resource);
-            const found = findItem(data, id);
-            if (!found) {
-                return res.status(404).json({ success: false, message: 'Δεν βρέθηκε.' });
-            }
-            data[found.category].splice(found.index, 1);
-            await writeData(resource, data);
-            res.json({ success: true });
+            await withLock(resource, async () => {
+                const id = Number.parseInt(req.params.id, 10);
+                const data = await readData(resource);
+                const found = findItem(data, id);
+                if (!found) {
+                    return res.status(404).json({ success: false, message: 'Δεν βρέθηκε.' });
+                }
+                data[found.category].splice(found.index, 1);
+                await writeData(resource, data);
+                res.json({ success: true });
+            });
         } catch (error) {
             next(error);
         }
@@ -196,6 +274,7 @@ function registerResource(resource, { validate }) {
 const nonEmpty = value => typeof value === 'string' && value.trim() !== '';
 
 registerResource('exhibitions', {
+    fields: () => ['name', 'location', 'date'],
     validate: (category, { name, location, date }) => {
         if (!nonEmpty(name)) return 'Το όνομα είναι υποχρεωτικό.';
         if (!nonEmpty(location)) return 'Η τοποθεσία είναι υποχρεωτική.';
@@ -205,6 +284,7 @@ registerResource('exhibitions', {
 });
 
 registerResource('links', {
+    fields: category => (category === 'web_links' ? ['name', 'url'] : ['name', 'author']),
     validate: (category, { name, url, author }) => {
         if (!nonEmpty(name)) return 'Το όνομα/τίτλος είναι υποχρεωτικό.';
         if (category === 'web_links') {
