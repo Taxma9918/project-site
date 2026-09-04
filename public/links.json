@@ -1,10 +1,10 @@
 {
-    "web_links": [
-        { "name": "Wikipedia", "url": "https://www.wikipedia.org" },
-        { "name": "Art Museum", "url": "https://www.artmuseum.com" }
-    ],
-    "bibliography": [
-        { "name": "The Art of Delacroix", "author": "John Smith" },
-        { "name": "Romanticism and Revolution", "author": "Emily Johnson" }
-    ]
+  "web_links": [
+    { "id": 1, "name": "Wikipedia", "url": "https://www.wikipedia.org" },
+    { "id": 2, "name": "Art Museum", "url": "https://www.artmuseum.com" }
+  ],
+  "bibliography": [
+    { "id": 3, "name": "The Art of Delacroix", "author": "John Smith" },
+    { "id": 4, "name": "Romanticism and Revolution", "author": "Emily Johnson" }
+  ]
 }

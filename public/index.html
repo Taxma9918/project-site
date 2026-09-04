@@ -9,89 +9,92 @@
 <body>
     <header>
         <h1>Διαδικτυακή Εφαρμογή Ζωγράφου</h1>
+        <p class="subtitle">Ευγένιος Ντελακρουά (1798–1863)</p>
     </header>
-    <nav class="top-menu">
+
+    <nav class="top-menu" aria-label="Κύριο μενού">
         <ul>
-            <li><button onclick="selectMenu('bio')">Βιογραφία</button></li>
-            <li><button onclick="selectMenu('paintings')">Πίνακες</button></li>
-            <li><button onclick="selectMenu('exhibitions')">Εκθέσεις</button></li>
-            <li><button onclick="selectMenu('links')">Σύνδεσμοι</button></li>
-            <li><button onclick="selectMenu('admin')">Διαχείριση</button></li>
+            <li><button type="button" data-menu="bio">Βιογραφία</button></li>
+            <li><button type="button" data-menu="paintings">Πίνακες</button></li>
+            <li><button type="button" data-menu="exhibitions">Εκθέσεις</button></li>
+            <li><button type="button" data-menu="links">Σύνδεσμοι</button></li>
+            <li><button type="button" data-menu="admin">Διαχείριση</button></li>
         </ul>
     </nav>
+
     <div class="container">
-        <aside>
+        <aside aria-label="Υπομενού">
             <div id="bio-menu" class="submenu hidden">
                 <h3>Βιογραφία</h3>
-                <p>Επιλέξτε κατηγορία...
+                <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                   <li><button onclick="showBiographySection('birth')">Γέννηση</button></li>
-                   <li><button onclick="showBiographySection('career')">Έργα</button></li>
-                 </ul>
+                    <li><button type="button" data-bio="birth">Γέννηση</button></li>
+                    <li><button type="button" data-bio="career">Έργα</button></li>
+                </ul>
             </div>
+
             <div id="paintings-menu" class="submenu hidden">
                 <h3>Κατηγορίες Πινάκων</h3>
                 <ul>
-                    <li><button onclick="showPaintings('landscapes')">Τοπία</button></li>
-                    <li><button onclick="showPaintings('portraits')">Πορτρέτα</button></li>
+                    <li><button type="button" data-paintings="all">Όλοι οι Πίνακες</button></li>
+                    <li><button type="button" data-paintings="landscapes">Τοπία</button></li>
+                    <li><button type="button" data-paintings="portraits">Πορτρέτα</button></li>
                 </ul>
             </div>
+
             <div id="exhibitions-menu" class="submenu hidden">
                 <h3>Εκθέσεις</h3>
                 <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                    <li><button onclick="showExhibitions('current')">Τρέχουσες Εκθέσεις</button></li>
-                    <li><button onclick="showExhibitions('past')">Παρελθούσες Εκθέσεις</button></li>
+                    <li><button type="button" data-exhibitions="current">Τρέχουσες Εκθέσεις</button></li>
+                    <li><button type="button" data-exhibitions="past">Παρελθούσες Εκθέσεις</button></li>
                 </ul>
             </div>
+
             <div id="links-menu" class="submenu hidden">
                 <h3>Σύνδεσμοι</h3>
                 <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                    <li><button onclick="showLinks('web_links')">Διαδικτυακοί Σύνδεσμοι</button></li>
-                    <li><button onclick="showLinks('bibliography')">Βιβλιογραφία</button></li>
+                    <li><button type="button" data-links="web_links">Διαδικτυακοί Σύνδεσμοι</button></li>
+                    <li><button type="button" data-links="bibliography">Βιβλιογραφία</button></li>
                 </ul>
             </div>
-            <div id="user-loggedin" class="hidden">
-                <p>Καλωσήρθατε, χρήστη!</p>
-                <button onclick="logout()">Αποσύνδεση</button>
-            </div>
-            
-            <div id="admin-menu" class="submenu">
+
+            <div id="admin-menu" class="submenu hidden">
                 <h3>Διαχείριση</h3>
-                <div id="admin-login" class="login-section">
+
+                <div id="login-section" class="login-section">
                     <h4>Σύνδεση Χρήστη</h4>
                     <form id="login-form">
                         <label for="username">Όνομα Χρήστη:</label>
-                        <input type="text" id="username" required>
+                        <input type="text" id="username" name="username" autocomplete="username" required>
                         <label for="password">Κωδικός:</label>
-                        <input type="password" id="password" required>
+                        <input type="password" id="password" name="password" autocomplete="current-password" required>
                         <button type="submit">Σύνδεση</button>
                     </form>
+                    <p id="login-error" class="error" role="alert" hidden></p>
                 </div>
-            
-                <div id="admin-loggedin" class="hidden admin-section">
-                    <h4>Καλωσήρθατε, Διαχειριστή!</h4>
-                    <button onclick="logout()">Αποσύνδεση</button>
-                    <button onclick="manageExhibitions()">Διαχείριση Εκθέσεων</button>
-                    <button onclick="manageLinks()">Διαχείριση Συνδέσμων</button>
-                </div>
-            
-                <div id="user-loggedin" class="hidden user-section">
-                    <h4>Καλωσήρθατε, Χρήστη!</h4>
-                    <button onclick="logout()">Αποσύνδεση</button>
+
+                <div id="session-section" class="hidden">
+                    <h4>Καλωσήρθατε, <span id="session-name"></span>!</h4>
+                    <div id="admin-actions" class="hidden admin-section">
+                        <button type="button" data-manage="exhibitions">Διαχείριση Εκθέσεων</button>
+                        <button type="button" data-manage="links">Διαχείριση Συνδέσμων</button>
+                    </div>
+                    <button type="button" id="logout-button">Αποσύνδεση</button>
                 </div>
             </div>
-            
-            
         </aside>
+
         <main id="main-content">
             <p>Καλωσορίσατε! Επιλέξτε μια επιλογή από το μενού.</p>
         </main>
     </div>
+
     <footer>
         <p>Copyright © 2025</p>
     </footer>
+
     <script src="script.js"></script>
 </body>
 </html>
