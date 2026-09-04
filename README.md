@@ -1,72 +1,73 @@
-# Διαδικτυακή Εφαρμογή Ευγένιου Ντελακρουά
+# Eugène Delacroix Web Application
 
-Web εφαρμογή παρουσίασης του ζωγράφου Ευγένιου Ντελακρουά (1798–1863), με
-βιογραφία, γκαλερί πινάκων, εκθέσεις και συνδέσμους. Οι εκθέσεις και οι
-σύνδεσμοι διαχειρίζονται από τον διαχειριστή μέσα από την εφαρμογή (CRUD).
+A web application about the painter Eugène Delacroix (1798–1863), featuring a
+biography, a gallery of paintings, exhibitions and reference links. Exhibitions
+and links are managed from inside the application by an administrator (CRUD).
 
-**Τεχνολογίες:** Node.js + Express (backend), vanilla HTML/CSS/JavaScript
-(frontend), αρχεία JSON ως αποθηκευτικό μέσο.
+**Stack:** Node.js + Express (backend), vanilla HTML/CSS/JavaScript (frontend),
+JSON files for storage.
 
-## Εγκατάσταση και εκτέλεση
+> The user interface and the source-code comments are written in Greek.
 
-Απαιτείται Node.js 18 ή νεότερο.
+## Installation and usage
+
+Requires Node.js 18 or newer.
 
 ```bash
 npm install
 npm start
 ```
 
-Η εφαρμογή τρέχει στο <http://localhost:3000> (ή στη θύρα της μεταβλητής
-περιβάλλοντος `PORT`).
+The application runs at <http://localhost:3000> (or on the port given by the
+`PORT` environment variable).
 
-## Λογαριασμοί δοκιμής
+## Test accounts
 
-| Χρήστης | Κωδικός    | Ρόλος        | Δικαιώματα                          |
-| ------- | ---------- | ------------ | ----------------------------------- |
-| `admin` | `1234`     | διαχειριστής | Προσθήκη/επεξεργασία/διαγραφή        |
-| `user`  | `user1234` | επισκέπτης   | Μόνο προβολή                         |
+| User    | Password   | Role          | Permissions            |
+| ------- | ---------- | ------------- | ---------------------- |
+| `admin` | `1234`     | administrator | Create/edit/delete     |
+| `user`  | `user1234` | visitor       | Read-only              |
 
-Οι κωδικοί **δεν** αποθηκεύονται σε καθαρό κείμενο: στο `server.js` φυλάσσονται
-scrypt hashes με salt και η σύγκριση γίνεται σε σταθερό χρόνο
-(`crypto.timingSafeEqual`).
+Passwords are **not** stored in plain text: `server.js` holds salted scrypt
+hashes and comparison is done in constant time (`crypto.timingSafeEqual`).
 
-## Δομή του project
+## Project structure
 
 ```
-server.js              Express server: αυθεντικοποίηση + REST API
+server.js              Express server: authentication + REST API
 public/
-  index.html           Δομή σελίδας
-  styles.css           Εμφάνιση (responsive)
-  script.js            Λογική frontend
-  paintings.json       Δεδομένα πινάκων (στατικά)
-  exhibitions.json     Δεδομένα εκθέσεων (μέσω API)
-  links.json           Δεδομένα συνδέσμων (μέσω API)
-  images/              Οι εικόνες των πινάκων
+  index.html           Page structure
+  styles.css           Styling (responsive)
+  script.js            Frontend logic
+  paintings.json       Painting data (static)
+  exhibitions.json     Exhibition data (via the API)
+  links.json           Link data (via the API)
+  images/              Painting images
 ```
 
 ## REST API
 
-Τα `GET` είναι ελεύθερα. Τα `POST`, `PUT` και `DELETE` απαιτούν κεφαλίδα
-`Authorization: Bearer <token>` με token διαχειριστή.
+`GET` requests are public. `POST`, `PUT` and `DELETE` require an
+`Authorization: Bearer <token>` header carrying an administrator token.
 
-| Μέθοδος  | Διαδρομή                | Περιγραφή                          |
-| -------- | ----------------------- | ---------------------------------- |
-| `POST`   | `/api/login`            | Σύνδεση, επιστρέφει token και ρόλο  |
-| `POST`   | `/api/logout`           | Ακύρωση του token                   |
-| `GET`    | `/api/me`               | Επαλήθευση token, επιστρέφει χρήστη  |
-| `GET`    | `/api/exhibitions`      | Όλες οι εκθέσεις ανά κατηγορία      |
-| `POST`   | `/api/exhibitions`      | Νέα έκθεση                          |
-| `PUT`    | `/api/exhibitions/:id`  | Ενημέρωση έκθεσης                   |
-| `DELETE` | `/api/exhibitions/:id`  | Διαγραφή έκθεσης                    |
-| `GET`    | `/api/links`            | Όλοι οι σύνδεσμοι ανά κατηγορία     |
-| `POST`   | `/api/links`            | Νέος σύνδεσμος                      |
-| `PUT`    | `/api/links/:id`        | Ενημέρωση συνδέσμου                 |
-| `DELETE` | `/api/links/:id`        | Διαγραφή συνδέσμου                  |
+| Method   | Path                    | Description                          |
+| -------- | ----------------------- | ------------------------------------ |
+| `POST`   | `/api/login`            | Sign in, returns a token and a role   |
+| `POST`   | `/api/logout`           | Invalidate the token                  |
+| `GET`    | `/api/me`               | Verify a token, returns the user      |
+| `GET`    | `/api/exhibitions`      | All exhibitions, grouped by category  |
+| `POST`   | `/api/exhibitions`      | Create an exhibition                  |
+| `PUT`    | `/api/exhibitions/:id`  | Update an exhibition                  |
+| `DELETE` | `/api/exhibitions/:id`  | Delete an exhibition                  |
+| `GET`    | `/api/links`            | All links, grouped by category        |
+| `POST`   | `/api/links`            | Create a link                         |
+| `PUT`    | `/api/links/:id`        | Update a link                         |
+| `DELETE` | `/api/links/:id`        | Delete a link                         |
 
-### Μορφή δεδομένων
+### Data format
 
-Κάθε αρχείο JSON είναι αντικείμενο με κατηγορίες, και κάθε εγγραφή έχει
-μοναδικό `id`:
+Each JSON file is an object keyed by category, and every entry carries a unique
+`id`:
 
 ```json
 {
@@ -77,10 +78,10 @@ public/
 }
 ```
 
-Στα `POST`/`PUT` το σώμα περιλαμβάνει και πεδίο `category`. Αν σε ένα `PUT`
-δοθεί διαφορετική κατηγορία, η εγγραφή μετακινείται σε εκείνη.
+`POST` and `PUT` bodies also include a `category` field. If a `PUT` is given a
+different category, the entry is moved into it.
 
-### Παράδειγμα
+### Example
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/login \
@@ -90,28 +91,29 @@ TOKEN=$(curl -s -X POST localhost:3000/api/login \
 curl -X POST localhost:3000/api/exhibitions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"category":"current","name":"Έκθεση","location":"Αθήνα","date":"2026-04-26"}'
+  -d '{"category":"current","name":"Exhibition","location":"Athens","date":"2026-04-26"}'
 ```
 
-## Σημειώσεις ασφάλειας
+## Security notes
 
-- Τα endpoints εγγραφής ελέγχουν token **και** ρόλο στον server, όχι μόνο στο UI.
-- Όλα τα δεδομένα περνούν από escaping πριν μπουν στο DOM, ώστε να μην είναι
-  δυνατή η εισαγωγή HTML/JavaScript (XSS).
-- Οι σύνδεσμοι φιλτράρονται ώστε να επιτρέπονται μόνο `http:` και `https:`.
-- Ο server επικυρώνει τα δεδομένα εισόδου (υποχρεωτικά πεδία, μορφή ημερομηνίας,
-  μορφή URL) και επιστρέφει `400` με επεξηγηματικό μήνυμα.
-- Ο server δέχεται **μόνο** τα γνωστά πεδία κάθε κατηγορίας. Έτσι ο client δεν
-  μπορεί ούτε να προσθέσει αυθαίρετα κλειδιά στο JSON, ούτε να πλαστογραφήσει το
-  `id` στέλνοντάς το μέσα στο σώμα του αιτήματος.
-- Οι συνεδρίες λήγουν μετά από 30 λεπτά αδράνειας (κυλιόμενη λήξη) και τα ληγμένα
-  tokens καθαρίζονται περιοδικά από τη μνήμη.
-- Οι εγγραφές στα αρχεία JSON γίνονται ατομικά (γράψιμο σε προσωρινό αρχείο και
-  `rename`) και σειριοποιημένα ανά πόρο, ώστε ταυτόχρονα αιτήματα να μη χαλάνε
-  ούτε να χάνουν δεδομένα.
+- Write endpoints check the token **and** the role on the server, not just in
+  the UI.
+- All data is escaped before it reaches the DOM, so HTML/JavaScript cannot be
+  injected (XSS).
+- Links are filtered so that only `http:` and `https:` are allowed.
+- The server validates incoming data (required fields, date format, URL format)
+  and answers with `400` and an explanatory message.
+- The server accepts **only** the known fields of each category. This stops a
+  client from adding arbitrary keys to the JSON files, or from forging the `id`
+  by sending it in the request body.
+- Sessions expire after 30 minutes of inactivity (sliding expiry) and expired
+  tokens are periodically cleared from memory.
+- Writes to the JSON files are atomic (write to a temporary file, then
+  `rename`) and serialized per resource, so concurrent requests cannot corrupt
+  or lose data.
 
-Ο client κρατά το token στο `sessionStorage`, οπότε η σύνδεση επιβιώνει ενός
-refresh αλλά σβήνεται μόλις κλείσει η καρτέλα. Μετά από refresh το token
-επαληθεύεται με `GET /api/me`, γιατί οι συνεδρίες ζουν στη μνήμη του server και
-χάνονται σε κάθε επανεκκίνησή του. Για παραγωγική χρήση θα χρειαζόταν πραγματική
-βάση δεδομένων, HTTPS και μόνιμη αποθήκευση συνεδριών.
+The client keeps its token in `sessionStorage`, so a session survives a page
+refresh but is discarded once the tab is closed. After a refresh the token is
+verified with `GET /api/me`, because sessions live in the server's memory and
+are lost on every restart. A production deployment would need a real database,
+HTTPS and persistent session storage.
