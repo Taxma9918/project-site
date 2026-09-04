@@ -6,11 +6,18 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Τα στατικά αρχεία και τα δεδομένα ζουν χωριστά: ό,τι είναι μέσα στο public/
+// σερβίρεται αυτούσιο, ενώ στο data/ φτάνει κανείς μόνο μέσα από το API.
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
+
 const DATA_FILES = {
-    exhibitions: path.join(PUBLIC_DIR, 'exhibitions.json'),
-    links: path.join(PUBLIC_DIR, 'links.json')
+    paintings: path.join(DATA_DIR, 'paintings.json'),
+    exhibitions: path.join(DATA_DIR, 'exhibitions.json'),
+    links: path.join(DATA_DIR, 'links.json')
 };
+
+const BIOGRAPHY_FILE = path.join(DATA_DIR, 'biography.json');
 
 // Διάρκεια ζωής μιας συνεδρίας χωρίς δραστηριότητα.
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -168,7 +175,7 @@ function findItem(data, id) {
 
 /**
  * Δημιουργεί τα CRUD endpoints για έναν πόρο, ώστε να μην
- * επαναλαμβάνεται ο ίδιος κώδικας για εκθέσεις και συνδέσμους.
+ * επαναλαμβάνεται ο ίδιος κώδικας για πίνακες, εκθέσεις και συνδέσμους.
  */
 function registerResource(resource, { fields, validate }) {
     const base = `/api/${resource}`;
@@ -273,6 +280,21 @@ function registerResource(resource, { fields, validate }) {
 
 const nonEmpty = value => typeof value === 'string' && value.trim() !== '';
 
+// Το πεδίο image είναι όνομα αρχείου μέσα στο public/images/, όχι διαδρομή:
+// απορρίπτουμε καθετάκια και ".." ώστε να μη δείχνει κανείς έξω από τον φάκελο.
+const IMAGE_FILENAME = /^[^/\\]+\.(?:jpe?g|png|webp|gif)$/i;
+
+registerResource('paintings', {
+    fields: () => ['title', 'image'],
+    validate: (category, { title, image }) => {
+        if (!nonEmpty(title)) return 'Ο τίτλος είναι υποχρεωτικός.';
+        if (!IMAGE_FILENAME.test(image || '') || image.includes('..')) {
+            return 'Η εικόνα πρέπει να είναι όνομα αρχείου (.jpg, .png, .webp ή .gif) μέσα στο public/images/.';
+        }
+        return null;
+    }
+});
+
 registerResource('exhibitions', {
     fields: () => ['name', 'location', 'date'],
     validate: (category, { name, location, date }) => {
@@ -296,7 +318,35 @@ registerResource('links', {
     }
 });
 
+// Η βιογραφία είναι στατικό κείμενο και δεν έχει κατηγορίες με εγγραφές, οπότε
+// δεν περνά από το registerResource: εκτίθεται μόνο για ανάγνωση.
+app.get('/api/biography', async (req, res, next) => {
+    try {
+        res.json(JSON.parse(await fs.readFile(BIOGRAPHY_FILE, 'utf8')));
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Άγνωστη διαδρομή κάτω από το /api: απαντάμε με JSON και όχι με τη σελίδα
+// σφάλματος του express, ώστε ο client να μπορεί πάντα να κάνει response.json().
+app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, message: 'Άγνωστο endpoint.' });
+});
+
 app.use((error, req, res, next) => {
+    // Τα σφάλματα του express.json() (χαλασμένο JSON, υπερμεγέθες σώμα) φέρουν
+    // δικό τους status 4xx. Το σεβόμαστε, ώστε ο client να ξεχωρίζει το «έστειλα
+    // κακά δεδομένα» από το «χάλασε ο διακομιστής».
+    const status = error.status || error.statusCode;
+    if (status >= 400 && status < 500) {
+        return res.status(status).json({
+            success: false,
+            message: error.type === 'entity.too.large'
+                ? 'Το αίτημα είναι υπερβολικά μεγάλο.'
+                : 'Μη έγκυρα δεδομένα στο αίτημα.'
+        });
+    }
     console.error(error);
     res.status(500).json({ success: false, message: 'Σφάλμα διακομιστή.' });
 });

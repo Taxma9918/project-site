@@ -35,13 +35,15 @@ hashes and comparison is done in constant time (`crypto.timingSafeEqual`).
 
 ```
 server.js              Express server: authentication + REST API
-public/
+data/                  Application data, reachable only through the API
+  biography.json       Biography text
+  paintings.json       Painting data
+  exhibitions.json     Exhibition data
+  links.json           Link data
+public/                Static files, served as-is
   index.html           Page structure
   styles.css           Styling (responsive)
   script.js            Frontend logic
-  paintings.json       Painting data (static)
-  exhibitions.json     Exhibition data (via the API)
-  links.json           Link data (via the API)
   images/              Painting images
 ```
 
@@ -55,6 +57,11 @@ public/
 | `POST`   | `/api/login`            | Sign in, returns a token and a role   |
 | `POST`   | `/api/logout`           | Invalidate the token                  |
 | `GET`    | `/api/me`               | Verify a token, returns the user      |
+| `GET`    | `/api/biography`        | Biography text (read-only)            |
+| `GET`    | `/api/paintings`        | All paintings, grouped by category    |
+| `POST`   | `/api/paintings`        | Create a painting                     |
+| `PUT`    | `/api/paintings/:id`    | Update a painting                     |
+| `DELETE` | `/api/paintings/:id`    | Delete a painting                     |
 | `GET`    | `/api/exhibitions`      | All exhibitions, grouped by category  |
 | `POST`   | `/api/exhibitions`      | Create an exhibition                  |
 | `PUT`    | `/api/exhibitions/:id`  | Update an exhibition                  |
@@ -111,6 +118,12 @@ curl -X POST localhost:3000/api/exhibitions \
 - Writes to the JSON files are atomic (write to a temporary file, then
   `rename`) and serialized per resource, so concurrent requests cannot corrupt
   or lose data.
+- The data files live in `data/`, outside the statically served `public/`
+  directory, so they can only be reached through the API.
+- A painting's `image` field must be a bare filename with an image extension,
+  so it cannot point outside `public/images/`.
+- Unknown `/api/*` paths answer with JSON, and malformed request bodies get a
+  `400` instead of being reported as a server error.
 
 The client keeps its token in `sessionStorage`, so a session survives a page
 refresh but is discarded once the tab is closed. After a refresh the token is
