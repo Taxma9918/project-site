@@ -2,25 +2,37 @@
   "landscapes": [
     {
       "id": 1,
-      "title": "Η Ελευθερία οδηγεί τον Λαό, 1830",
-      "image": "Eugène_Delacroix_-_La_liberté_guidant_le_peuple.jpg"
+      "title": "Η Ελευθερία οδηγεί τον Λαό",
+      "image": "Eugène_Delacroix_-_La_liberté_guidant_le_peuple.jpg",
+      "year": "1830",
+      "technique": "Λάδι σε καμβά",
+      "museum": "Μουσείο του Λούβρου, Παρίσι"
     },
     {
       "id": 2,
-      "title": "Οβίδιος και Σκύθες, λάδι σε καμβά, 1859",
-      "image": "Eugène_Delacroix_-_Ovide_chez_les_Scythes_(1859).jpg"
+      "title": "Ο Οβίδιος στους Σκύθες",
+      "image": "Eugène_Delacroix_-_Ovide_chez_les_Scythes_(1859).jpg",
+      "year": "1859",
+      "technique": "Λάδι σε καμβά",
+      "museum": "National Gallery, Λονδίνο"
     }
   ],
   "portraits": [
     {
       "id": 3,
-      "title": "Η ορφανή στο κοιμητήριο,1823",
-      "image": "Eugène_Delacroix_-_Jeune_orpheline_au_cimetière_(vers_1824).JPG"
+      "title": "Η ορφανή στο κοιμητήριο",
+      "image": "Eugène_Delacroix_-_Jeune_orpheline_au_cimetière_(vers_1824).JPG",
+      "year": "περ. 1824",
+      "technique": "Λάδι σε καμβά",
+      "museum": "Μουσείο του Λούβρου, Παρίσι"
     },
     {
       "id": 4,
-      "title": "Κεφαλή γυναίκας, 1823",
-      "image": "114px-Delacroix_head_of_a_woman.jpg"
+      "title": "Κεφαλή γυναίκας",
+      "image": "114px-Delacroix_head_of_a_woman.jpg",
+      "year": "1823",
+      "technique": "Λάδι σε καμβά",
+      "museum": ""
     }
   ]
 }

@@ -348,7 +348,9 @@ const nonEmpty = value => typeof value === 'string' && value.trim() !== '';
 const IMAGE_FILENAME = /^[^/\\]+\.(?:jpe?g|png|webp|gif)$/i;
 
 registerResource('paintings', {
-    fields: () => ['title', 'image'],
+    // Τα year, technique και museum είναι προαιρετικά: ένα έργο μπορεί να
+    // καταχωρηθεί και χωρίς αυτά.
+    fields: () => ['title', 'image', 'year', 'technique', 'museum'],
     validate: (category, { title, image }) => {
         if (!nonEmpty(title)) return 'Ο τίτλος είναι υποχρεωτικός.';
         if (!IMAGE_FILENAME.test(image || '') || image.includes('..')) {

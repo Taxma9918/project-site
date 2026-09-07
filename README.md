@@ -9,6 +9,23 @@ JSON files for storage.
 
 > The user interface and the source-code comments are written in Greek.
 
+## Interface
+
+- **Linkable sections.** Application state lives in the URL hash, so every
+  section has its own address — `#/paintings/portraits`,
+  `#/links/bibliography`, `#/bio/birth`. Sections can be bookmarked or shared,
+  and the browser back and forward buttons work as expected.
+- **Lightbox.** Clicking a painting opens it at full size with its caption.
+  It closes with Escape, with the close button, or by clicking the backdrop,
+  and focus returns to the thumbnail that opened it.
+- **Search.** The gallery and the data tables have a filter box that narrows
+  what is shown as you type, without another request to the server.
+- **Accessibility.** A skip link, `aria-current` on the active menu item, focus
+  moved to the main region after navigation, keyboard-operable paintings, and a
+  focus trap while the lightbox is open.
+- **Loading states**, a favicon, and images with a fixed aspect ratio so the
+  layout does not shift as they load.
+
 ## Installation and usage
 
 Requires Node.js 18 or newer.
@@ -59,6 +76,7 @@ public/                Static files, served as-is
   index.html           Page structure
   styles.css           Styling (responsive)
   script.js            Frontend logic
+  favicon.svg          Browser tab icon
   images/              Painting images
 scripts/
   hash-password.js     Generates an entry for data/users.json
@@ -104,6 +122,21 @@ Each JSON file is an object keyed by category, and every entry carries a unique
 
 `POST` and `PUT` bodies also include a `category` field. If a `PUT` is given a
 different category, the entry is moved into it.
+
+A painting carries `title` and `image` (both required) plus the optional `year`,
+`technique` and `museum`, which are shown under the thumbnail and in the
+lightbox caption:
+
+```json
+{
+  "id": 1,
+  "title": "Η Ελευθερία οδηγεί τον Λαό",
+  "image": "Eugène_Delacroix_-_La_liberté_guidant_le_peuple.jpg",
+  "year": "1830",
+  "technique": "Λάδι σε καμβά",
+  "museum": "Μουσείο του Λούβρου, Παρίσι"
+}
+```
 
 ### Example
 

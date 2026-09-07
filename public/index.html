@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Διαδικτυακή Εφαρμογή Ευγένιου Ντελακρουά</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Μετάβαση στο περιεχόμενο</a>
+
     <header>
         <h1>Διαδικτυακή Εφαρμογή Ζωγράφου</h1>
         <p class="subtitle">Ευγένιος Ντελακρουά (1798–1863)</p>
@@ -14,11 +17,11 @@
 
     <nav class="top-menu" aria-label="Κύριο μενού">
         <ul>
-            <li><button type="button" data-menu="bio">Βιογραφία</button></li>
-            <li><button type="button" data-menu="paintings">Πίνακες</button></li>
-            <li><button type="button" data-menu="exhibitions">Εκθέσεις</button></li>
-            <li><button type="button" data-menu="links">Σύνδεσμοι</button></li>
-            <li><button type="button" data-menu="admin">Διαχείριση</button></li>
+            <li><button type="button" data-nav="bio">Βιογραφία</button></li>
+            <li><button type="button" data-nav="paintings">Πίνακες</button></li>
+            <li><button type="button" data-nav="exhibitions">Εκθέσεις</button></li>
+            <li><button type="button" data-nav="links">Σύνδεσμοι</button></li>
+            <li><button type="button" data-nav="admin">Διαχείριση</button></li>
         </ul>
     </nav>
 
@@ -28,17 +31,17 @@
                 <h3>Βιογραφία</h3>
                 <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                    <li><button type="button" data-bio="birth">Γέννηση</button></li>
-                    <li><button type="button" data-bio="career">Έργα</button></li>
+                    <li><button type="button" data-nav="bio/birth">Γέννηση</button></li>
+                    <li><button type="button" data-nav="bio/career">Έργα</button></li>
                 </ul>
             </div>
 
             <div id="paintings-menu" class="submenu hidden">
                 <h3>Κατηγορίες Πινάκων</h3>
                 <ul>
-                    <li><button type="button" data-paintings="all">Όλοι οι Πίνακες</button></li>
-                    <li><button type="button" data-paintings="landscapes">Τοπία</button></li>
-                    <li><button type="button" data-paintings="portraits">Πορτρέτα</button></li>
+                    <li><button type="button" data-nav="paintings/all">Όλοι οι Πίνακες</button></li>
+                    <li><button type="button" data-nav="paintings/landscapes">Τοπία</button></li>
+                    <li><button type="button" data-nav="paintings/portraits">Πορτρέτα</button></li>
                 </ul>
             </div>
 
@@ -46,8 +49,8 @@
                 <h3>Εκθέσεις</h3>
                 <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                    <li><button type="button" data-exhibitions="current">Τρέχουσες Εκθέσεις</button></li>
-                    <li><button type="button" data-exhibitions="past">Παρελθούσες Εκθέσεις</button></li>
+                    <li><button type="button" data-nav="exhibitions/current">Τρέχουσες Εκθέσεις</button></li>
+                    <li><button type="button" data-nav="exhibitions/past">Παρελθούσες Εκθέσεις</button></li>
                 </ul>
             </div>
 
@@ -55,8 +58,8 @@
                 <h3>Σύνδεσμοι</h3>
                 <p>Επιλέξτε κατηγορία...</p>
                 <ul>
-                    <li><button type="button" data-links="web_links">Διαδικτυακοί Σύνδεσμοι</button></li>
-                    <li><button type="button" data-links="bibliography">Βιβλιογραφία</button></li>
+                    <li><button type="button" data-nav="links/web_links">Διαδικτυακοί Σύνδεσμοι</button></li>
+                    <li><button type="button" data-nav="links/bibliography">Βιβλιογραφία</button></li>
                 </ul>
             </div>
 
@@ -78,23 +81,34 @@
                 <div id="session-section" class="hidden">
                     <h4>Καλωσήρθατε, <span id="session-name"></span>!</h4>
                     <div id="admin-actions" class="hidden admin-section">
-                        <button type="button" data-manage="paintings">Διαχείριση Πινάκων</button>
-                        <button type="button" data-manage="exhibitions">Διαχείριση Εκθέσεων</button>
-                        <button type="button" data-manage="links">Διαχείριση Συνδέσμων</button>
+                        <button type="button" data-nav="admin/paintings">Διαχείριση Πινάκων</button>
+                        <button type="button" data-nav="admin/exhibitions">Διαχείριση Εκθέσεων</button>
+                        <button type="button" data-nav="admin/links">Διαχείριση Συνδέσμων</button>
                     </div>
                     <button type="button" id="logout-button">Αποσύνδεση</button>
                 </div>
             </div>
         </aside>
 
-        <main id="main-content">
+        <main id="main-content" tabindex="-1" aria-live="polite">
             <p>Καλωσορίσατε! Επιλέξτε μια επιλογή από το μενού.</p>
         </main>
     </div>
 
     <footer>
-        <p>Copyright © <span id="footer-year">2025</span></p>
+        <p>Copyright © <span id="footer-year"></span></p>
     </footer>
+
+    <!-- Μεγέθυνση πίνακα. Μένει κρυφό μέχρι να επιλεγεί κάποιο έργο. -->
+    <div id="lightbox" class="lightbox" role="dialog" aria-modal="true"
+         aria-labelledby="lightbox-caption" hidden>
+        <div class="lightbox-inner">
+            <button type="button" id="lightbox-close" class="lightbox-close"
+                    aria-label="Κλείσιμο">&times;</button>
+            <img id="lightbox-image" alt="">
+            <p id="lightbox-caption" class="lightbox-caption"></p>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

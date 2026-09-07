@@ -3,6 +3,7 @@
     --nav: #444;
     --panel: #f4f4f4;
     --border: #ccc;
+    --muted: #666;
     --accent: #007bff;
     --accent-hover: #0056b3;
     --danger: #c62828;
@@ -23,6 +24,26 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+}
+
+/* Όσο είναι ανοιχτό το lightbox, η σελίδα από κάτω δεν κυλάει. */
+body.no-scroll {
+    overflow: hidden;
+}
+
+/* Σύνδεσμος παράκαμψης: φαίνεται μόνο όταν πάρει focus με Tab. */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 60;
+    padding: 0.6rem 1rem;
+    background-color: var(--accent);
+    color: white;
+}
+
+.skip-link:focus {
+    left: 0;
 }
 
 header {
@@ -69,6 +90,17 @@ header h1 {
     background-color: var(--accent-hover);
 }
 
+/* Το ενεργό στοιχείο μενού. Το aria-current το ορίζει το script. */
+.top-menu button[aria-current] {
+    background-color: var(--accent-hover);
+    font-weight: bold;
+}
+
+aside button[aria-current] {
+    background-color: var(--accent-hover);
+    font-weight: bold;
+}
+
 /* ------------------------------ Διάταξη ------------------------------ */
 
 .container {
@@ -99,12 +131,33 @@ main {
     min-width: 0;
 }
 
+/* Το main δέχεται focus μετά από πλοήγηση, αλλά δεν θέλουμε πλαίσιο με ποντίκι. */
+main:focus {
+    outline: none;
+}
+
 footer {
     text-align: center;
     background-color: var(--dark);
     color: white;
     padding: 1rem;
     margin-top: auto;
+}
+
+/* ------------------------- Καταστάσεις & φίλτρο ------------------------- */
+
+.loading,
+.filter-empty {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.filter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-width: 420px;
+    margin: 0 0 1rem;
 }
 
 /* ------------------------------ Πίνακες ------------------------------ */
@@ -126,16 +179,50 @@ footer {
     background-color: #f9f9f9;
 }
 
-.painting-card img {
-    max-width: 100%;
-    height: auto;
+/* Η εικόνα είναι κουμπί, ώστε η μεγέθυνση να δουλεύει και με πληκτρολόγιο. */
+.painting-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    cursor: zoom-in;
+}
+
+/*
+ * Σταθερή αναλογία: όλες οι κάρτες έχουν ίδιο ύψος και η θέση τους δεν
+ * μετακινείται καθώς φορτώνουν οι εικόνες. Το contain (αντί για cover)
+ * δείχνει ολόκληρο το έργο, χωρίς να το κόβει.
+ */
+.painting-open img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background-color: #efefef;
     border-radius: 4px;
 }
 
-.painting-card figcaption {
-    margin-top: 0.5rem;
+.painting-open:hover img {
+    opacity: 0.85;
+}
+
+.painting-title {
+    display: block;
     font-size: 0.95rem;
     color: var(--dark);
+}
+
+.painting-meta {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+figcaption {
+    margin-top: 0.5rem;
 }
 
 /* --------------------------- Πίνακες δεδομένων --------------------------- */
@@ -262,6 +349,60 @@ button.danger:hover {
     margin: 0.5rem 0 0;
 }
 
+/* ------------------------------ Lightbox ------------------------------ */
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    padding: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: min(1000px, 100%);
+}
+
+.lightbox-inner img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 4px;
+    background-color: #111;
+}
+
+.lightbox-caption {
+    margin: 0;
+    text-align: center;
+    color: white;
+    font-size: 0.95rem;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -0.75rem;
+    right: -0.75rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border-radius: 50%;
+    background-color: var(--dark);
+    color: white;
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.lightbox-close:hover {
+    background-color: var(--danger);
+}
+
 /* ------------------------------ Responsive ------------------------------ */
 
 @media (max-width: 768px) {
@@ -283,12 +424,22 @@ button.danger:hover {
         display: block;
         overflow-x: auto;
     }
+
+    .lightbox {
+        padding: 0.75rem;
+    }
+
+    .lightbox-close {
+        top: 0.25rem;
+        right: 0.25rem;
+    }
 }
 
 /* --------------------------- Utility --------------------------- */
 
 /* Μπαίνει τελευταίο και με !important, γιατί αλλιώς κανόνες όπως
-   #session-section { display: flex } υπερισχύουν λόγω specificity. */
+   #session-section { display: flex } ή .lightbox { display: flex }
+   υπερισχύουν λόγω specificity. */
 .hidden,
 [hidden] {
     display: none !important;
