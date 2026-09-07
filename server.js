@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs/promises');
+const { readFileSync } = require('fs');
 const path = require('path');
 
 const app = express();
@@ -18,9 +19,33 @@ const DATA_FILES = {
 };
 
 const BIOGRAPHY_FILE = path.join(DATA_DIR, 'biography.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 // Διάρκεια ζωής μιας συνεδρίας χωρίς δραστηριότητα.
 const SESSION_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * Βασικές κεφαλίδες ασφαλείας, γραμμένες με το χέρι αντί για helmet, ώστε το
+ * project να μένει χωρίς επιπλέον εξαρτήσεις. Το CSP είναι αυστηρό, χωρίς
+ * 'unsafe-inline', επειδή η σελίδα δεν έχει ούτε inline scripts ούτε inline
+ * styles: όλα φορτώνονται από ξεχωριστά αρχεία της ίδιας προέλευσης.
+ */
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self'",
+        "connect-src 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'"
+    ].join('; '));
+    next();
+});
 
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
@@ -30,20 +55,10 @@ app.use(express.static(PUBLIC_DIR));
  * Οι κωδικοί αποθηκεύονται ως scrypt hashes, ποτέ σε καθαρό κείμενο.
  * Προεπιλεγμένα διαπιστευτήρια: admin/1234 και user/user1234
  * ---------------------------------------------------------------- */
-const users = [
-    {
-        username: 'admin',
-        role: 'admin',
-        salt: 'd2e8c097d31218e60af06cbb7a76692d',
-        hash: 'c920610245a5f29f9cd11226646f8597bedf60bed07acec70ff787688637f3e80cf907244d6a4504ccd55e9c1dc36ec6d4dacab96cdbcbbf69e230a9daf0a9c0'
-    },
-    {
-        username: 'user',
-        role: 'user',
-        salt: '5fbe609765db75222871db89913d6132',
-        hash: '07388df9c9ed4b95e67ddb1c5b4d707d6cc9d5b875853842737b7cb6eb0c6eb2648b3463389dc672b91ce680694c6b691fa0ff7a6b1c02f295bb434b0f6247a8'
-    }
-];
+// Οι χρήστες φορτώνονται από το data/users.json, ώστε να μη ζουν μέσα στον
+// κώδικα. Η ανάγνωση είναι σύγχρονη επειδή γίνεται μία φορά στην εκκίνηση:
+// χωρίς αρχείο χρηστών ο server δεν έχει νόημα να σηκωθεί.
+const users = JSON.parse(readFileSync(USERS_FILE, 'utf8'));
 
 // Ενεργές συνεδρίες: token -> { username, role, expiresAt }
 const sessions = new Map();
@@ -93,13 +108,61 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-app.post('/api/login', (req, res) => {
+/* ---------------------------------------------------------------- *
+ * Περιορισμός προσπαθειών σύνδεσης
+ * Χωρίς αυτόν, το /api/login δέχεται απεριόριστες δοκιμές κωδικού.
+ * Ο μετρητής ζει στη μνήμη, όπως και οι συνεδρίες.
+ * ---------------------------------------------------------------- */
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+// IP -> { count, resetAt }
+const loginAttempts = new Map();
+
+function loginLimiter(req, res, next) {
+    const entry = loginAttempts.get(req.ip);
+    if (!entry || entry.resetAt <= Date.now()) {
+        loginAttempts.delete(req.ip);
+        return next();
+    }
+    if (entry.count < LOGIN_MAX_ATTEMPTS) return next();
+
+    const seconds = Math.ceil((entry.resetAt - Date.now()) / 1000);
+    res.setHeader('Retry-After', String(seconds));
+    return res.status(429).json({
+        success: false,
+        message: `Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε ξανά σε ${Math.ceil(seconds / 60)} λεπτά.`
+    });
+}
+
+function recordFailedLogin(ip) {
+    const entry = loginAttempts.get(ip);
+    if (entry && entry.resetAt > Date.now()) {
+        entry.count += 1;
+    } else {
+        loginAttempts.set(ip, { count: 1, resetAt: Date.now() + LOGIN_WINDOW_MS });
+    }
+}
+
+// Καθαρισμός των παλιών μετρητών, ώστε το Map να μη μεγαλώνει επ' άπειρον.
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of loginAttempts) {
+        if (entry.resetAt <= now) loginAttempts.delete(ip);
+    }
+}, LOGIN_WINDOW_MS).unref();
+
+app.post('/api/login', loginLimiter, (req, res) => {
     const { username, password } = req.body || {};
     const user = users.find(u => u.username === username);
 
     if (!user || typeof password !== 'string' || !verifyPassword(user, password)) {
+        recordFailedLogin(req.ip);
         return res.status(401).json({ success: false, message: 'Λάθος όνομα χρήστη ή κωδικός.' });
     }
+
+    // Επιτυχής σύνδεση: ο μετρητής μηδενίζεται.
+    loginAttempts.delete(req.ip);
 
     const token = crypto.randomBytes(32).toString('hex');
     sessions.set(token, {

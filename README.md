@@ -28,14 +28,29 @@ The application runs at <http://localhost:3000> (or on the port given by the
 | `admin` | `1234`     | administrator | Create/edit/delete     |
 | `user`  | `user1234` | visitor       | Read-only              |
 
-Passwords are **not** stored in plain text: `server.js` holds salted scrypt
-hashes and comparison is done in constant time (`crypto.timingSafeEqual`).
+Accounts live in `data/users.json`, not in the source. Passwords are **not**
+stored in plain text: the file holds salted scrypt hashes, and comparison is
+done in constant time (`crypto.timingSafeEqual`).
+
+To add an account or change a password, generate the entry with the helper
+script and paste it into `data/users.json`. The password is read from stdin, so
+it never lands in your shell history:
+
+```bash
+npm run hash-password -- alice admin
+```
+
+Repeated failed logins from the same address are throttled: after 5 failures the
+endpoint answers `429` for 15 minutes, and a successful login clears the counter.
+The counter lives in memory, so restarting the server also clears it. Both limits
+are constants near the top of `server.js`.
 
 ## Project structure
 
 ```
 server.js              Express server: authentication + REST API
 data/                  Application data, reachable only through the API
+  users.json           Accounts: usernames, roles, scrypt hashes
   biography.json       Biography text
   paintings.json       Painting data
   exhibitions.json     Exhibition data
@@ -45,6 +60,8 @@ public/                Static files, served as-is
   styles.css           Styling (responsive)
   script.js            Frontend logic
   images/              Painting images
+scripts/
+  hash-password.js     Generates an entry for data/users.json
 ```
 
 ## REST API
@@ -124,6 +141,14 @@ curl -X POST localhost:3000/api/exhibitions \
   so it cannot point outside `public/images/`.
 - Unknown `/api/*` paths answer with JSON, and malformed request bodies get a
   `400` instead of being reported as a server error.
+- Accounts live in `data/users.json` rather than in the source code, and only
+  salted scrypt hashes are stored.
+- The login endpoint is rate limited (5 attempts per 15 minutes per address), so
+  passwords cannot be brute forced.
+- Every response carries `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy` and a strict `Content-Security-Policy`. The policy needs no
+  `unsafe-inline`, because the page has no inline scripts, styles or event
+  handlers.
 
 The client keeps its token in `sessionStorage`, so a session survives a page
 refresh but is discarded once the tab is closed. After a refresh the token is

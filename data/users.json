@@ -1,0 +1,14 @@
+[
+  {
+    "username": "admin",
+    "role": "admin",
+    "salt": "d2e8c097d31218e60af06cbb7a76692d",
+    "hash": "c920610245a5f29f9cd11226646f8597bedf60bed07acec70ff787688637f3e80cf907244d6a4504ccd55e9c1dc36ec6d4dacab96cdbcbbf69e230a9daf0a9c0"
+  },
+  {
+    "username": "user",
+    "role": "user",
+    "salt": "5fbe609765db75222871db89913d6132",
+    "hash": "07388df9c9ed4b95e67ddb1c5b4d707d6cc9d5b875853842737b7cb6eb0c6eb2648b3463389dc672b91ce680694c6b691fa0ff7a6b1c02f295bb434b0f6247a8"
+  }
+]
