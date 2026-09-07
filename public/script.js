@@ -572,7 +572,7 @@ function saveSession() {
  * γιατί οι συνεδρίες ζουν στη μνήμη και χάνονται σε κάθε επανεκκίνησή του.
  */
 async function restoreSession() {
-    let stored = null;
+    let stored;
     try {
         stored = sessionStorage.getItem(SESSION_KEY);
     } catch {

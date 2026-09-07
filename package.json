@@ -1,19 +1,34 @@
 {
   "name": "project-site",
   "version": "1.0.0",
+  "description": "Web application about the painter Eugène Delacroix: biography, gallery, exhibitions and bibliography, with a REST API and role-based content management.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "lint": "eslint .",
     "hash-password": "node scripts/hash-password.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "delacroix",
+    "express",
+    "nodejs",
+    "rest-api",
+    "crud",
+    "vanilla-js"
+  ],
+  "author": "Taxma9918",
   "license": "ISC",
-  "description": "Διαδικτυακή εφαρμογή παρουσίασης του ζωγράφου Ευγένιου Ντελακρουά (Express + vanilla JS).",
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.22.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }

@@ -38,6 +38,32 @@ npm start
 The application runs at <http://localhost:3000> (or on the port given by the
 `PORT` environment variable).
 
+## Development
+
+| Script                  | What it does                                   |
+| ----------------------- | ---------------------------------------------- |
+| `npm start`             | Runs the server                                 |
+| `npm run dev`           | Runs it with `--watch`, restarting on changes   |
+| `npm test`              | Runs the test suite                             |
+| `npm run lint`          | Runs ESLint over the whole project              |
+| `npm run hash-password` | Generates an entry for `data/users.json`        |
+
+### Tests
+
+`npm test` runs 22 tests against the real Express application over HTTP,
+covering authentication, role permissions, input validation, the full CRUD
+cycle including moving an entry between categories, concurrent writes, and
+error handling.
+
+Each test file starts its own copy of the app on an ephemeral port, pointed at
+a temporary copy of `data/` through the `DATA_DIR` environment variable, so the
+suite never touches the real data files. Authentication tests live in their own
+file because the login rate limiter keeps state per address, and `node --test`
+gives every file a separate process.
+
+Running the suite needs Node 21 or newer, because the script lets the test
+runner expand the glob itself.
+
 ## Test accounts
 
 | User    | Password   | Role          | Permissions            |
@@ -80,6 +106,10 @@ public/                Static files, served as-is
   images/              Painting images
 scripts/
   hash-password.js     Generates an entry for data/users.json
+test/                  Test suite (node:test)
+  helpers.js           Starts the app on a temporary copy of data/
+  api.test.js          Resources, permissions, validation, CRUD
+  auth.test.js         Login, tokens, rate limiting
 ```
 
 ## REST API
@@ -188,3 +218,17 @@ refresh but is discarded once the tab is closed. After a refresh the token is
 verified with `GET /api/me`, because sessions live in the server's memory and
 are lost on every restart. A production deployment would need a real database,
 HTTPS and persistent session storage.
+
+## Deployment
+
+The application is a plain Node server, so any host that runs Node works
+(Render, Railway, Fly.io). It reads the port from `PORT`, which those platforms
+set for you, so `npm start` is enough as a start command and no extra
+configuration is needed.
+
+One caveat is worth knowing before demoing a deployed copy: the data lives in
+JSON files next to the code. Hosts with an ephemeral filesystem rewrite those
+files from the repository on every restart and redeploy, so anything added
+through the admin screens disappears. For a demo that is usually fine; making it
+permanent means replacing the JSON files with a real database, or mounting a
+persistent disk at `data/`.

@@ -10,7 +10,9 @@ const PORT = process.env.PORT || 3000;
 // Τα στατικά αρχεία και τα δεδομένα ζουν χωριστά: ό,τι είναι μέσα στο public/
 // σερβίρεται αυτούσιο, ενώ στο data/ φτάνει κανείς μόνο μέσα από το API.
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const DATA_DIR = path.join(__dirname, 'data');
+// Ο φάκελος δεδομένων είναι ρυθμιζόμενος, ώστε τα tests να τρέχουν πάνω σε
+// αντίγραφο και να μην πειράζουν τα πραγματικά αρχεία.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const DATA_FILES = {
     paintings: path.join(DATA_DIR, 'paintings.json'),
@@ -416,6 +418,12 @@ app.use((error, req, res, next) => {
     res.status(500).json({ success: false, message: 'Σφάλμα διακομιστή.' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+// Ο server σηκώνεται μόνο όταν το αρχείο εκτελείται απευθείας. Έτσι τα tests
+// μπορούν να φορτώσουν την εφαρμογή και να την ακούσουν σε δική τους θύρα.
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
