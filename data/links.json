@@ -2,25 +2,60 @@
   "web_links": [
     {
       "id": 1,
-      "name": "Wikipedia",
-      "url": "https://www.wikipedia.org"
+      "name": "Ευγένιος Ντελακρουά — Βικιπαίδεια",
+      "url": "https://el.wikipedia.org/wiki/Ευγένιος_Ντελακρουά"
     },
     {
       "id": 2,
-      "name": "Art Museum",
-      "url": "https://www.artmuseum.com"
+      "name": "Εθνικό Μουσείο Ευγένιου Ντελακρουά, Παρίσι",
+      "url": "https://www.musee-delacroix.fr"
+    },
+    {
+      "id": 3,
+      "name": "Μουσείο του Λούβρου",
+      "url": "https://www.louvre.fr"
+    },
+    {
+      "id": 4,
+      "name": "National Gallery, Λονδίνο — Eugène Delacroix",
+      "url": "https://www.nationalgallery.org.uk/artists/eugene-delacroix"
+    },
+    {
+      "id": 5,
+      "name": "WikiArt — τα έργα του Ντελακρουά",
+      "url": "https://www.wikiart.org/en/eugene-delacroix"
+    },
+    {
+      "id": 6,
+      "name": "Web Gallery of Art — Delacroix",
+      "url": "https://www.wga.hu/html/d/delacroi/index.html"
     }
   ],
   "bibliography": [
     {
-      "id": 3,
-      "name": "The Art of Delacroix",
-      "author": "John Smith"
+      "id": 7,
+      "name": "Journal, 1822–1863 (το ημερολόγιο του ίδιου του ζωγράφου)",
+      "author": "Eugène Delacroix"
     },
     {
-      "id": 4,
-      "name": "Romanticism and Revolution",
-      "author": "Emily Johnson"
+      "id": 8,
+      "name": "L'Œuvre et la vie d'Eugène Delacroix, 1863",
+      "author": "Charles Baudelaire"
+    },
+    {
+      "id": 9,
+      "name": "The Paintings of Eugène Delacroix: A Critical Catalogue",
+      "author": "Lee Johnson"
+    },
+    {
+      "id": 10,
+      "name": "Delacroix (Princeton University Press)",
+      "author": "Barthélémy Jobert"
+    },
+    {
+      "id": 11,
+      "name": "Delacroix, κατάλογος της αναδρομικής έκθεσης 2018",
+      "author": "Sébastien Allard, Côme Fabre κ.ά."
     }
   ]
 }

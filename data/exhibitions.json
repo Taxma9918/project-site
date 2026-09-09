@@ -2,29 +2,35 @@
   "current": [
     {
       "id": 1,
-      "name": "The Moroccan Journey",
-      "location": "Louvre Museum",
-      "date": "2026-05-20"
+      "name": "Μόνιμη συλλογή: το ατελιέ του ζωγράφου",
+      "location": "Εθνικό Μουσείο Ευγένιου Ντελακρουά, Παρίσι",
+      "date": "1971-01-01"
     },
     {
       "id": 2,
-      "name": "Romantic Masterpieces",
-      "location": "National Gallery",
-      "date": "2026-09-01"
+      "name": "«Η Ελευθερία οδηγεί τον Λαό», μόνιμη έκθεση",
+      "location": "Μουσείο του Λούβρου, Παρίσι",
+      "date": "1874-01-01"
     }
   ],
   "past": [
     {
       "id": 3,
-      "name": "Revolutionary Art",
-      "location": "Metropolitan Museum",
-      "date": "2022-11-10"
+      "name": "Delacroix (1798–1863), αναδρομική έκθεση",
+      "location": "Μουσείο του Λούβρου, Παρίσι",
+      "date": "2018-03-29"
     },
     {
       "id": 4,
-      "name": "Delacroix and the Orient",
-      "location": "Orsay Museum",
-      "date": "2021-09-25"
+      "name": "Delacroix",
+      "location": "Metropolitan Museum of Art, Νέα Υόρκη",
+      "date": "2018-09-17"
+    },
+    {
+      "id": 5,
+      "name": "Delacroix and the Rise of Modern Art",
+      "location": "National Gallery, Λονδίνο",
+      "date": "2016-02-17"
     }
   ]
 }
