@@ -104,6 +104,7 @@ public/                Static files, served as-is
   script.js            Frontend logic
   favicon.svg          Browser tab icon
   images/              Painting images
+render.yaml            Deployment blueprint for Render
 scripts/
   hash-password.js     Generates an entry for data/users.json
 test/                  Test suite (node:test)
@@ -223,12 +224,21 @@ HTTPS and persistent session storage.
 
 The application is a plain Node server, so any host that runs Node works
 (Render, Railway, Fly.io). It reads the port from `PORT`, which those platforms
-set for you, so `npm start` is enough as a start command and no extra
-configuration is needed.
+set for you, so `npm start` is enough as a start command.
 
-One caveat is worth knowing before demoing a deployed copy: the data lives in
-JSON files next to the code. Hosts with an ephemeral filesystem rewrite those
-files from the repository on every restart and redeploy, so anything added
-through the admin screens disappears. For a demo that is usually fine; making it
-permanent means replacing the JSON files with a real database, or mounting a
-persistent disk at `data/`.
+`render.yaml` in the repository root is a ready blueprint for [Render](https://render.com):
+
+1. Push the repository to GitHub (already done).
+2. Sign in to Render and choose **New > Blueprint**.
+3. Pick this repository. Render reads `render.yaml` and needs nothing else.
+4. The first build takes a couple of minutes, then the service gets a public
+   `.onrender.com` address.
+
+Two things to expect on the free plan. The service sleeps after roughly fifteen
+minutes without traffic, and the next visit takes about a minute to wake it, so
+open the link before a presentation rather than during one. And the filesystem
+is ephemeral: the data lives in JSON files next to the code, so the `data/`
+folder is rewritten from the repository on every restart and redeploy, and
+anything added through the admin screens disappears. For a demo that is usually
+fine; making it permanent means replacing the JSON files with a real database,
+or mounting a persistent disk at `data/`, which needs a paid plan.
