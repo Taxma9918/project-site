@@ -21,7 +21,7 @@
   "author": "Taxma9918",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.22.2"
+    "express": "^5.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
