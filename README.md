@@ -2,6 +2,11 @@
 
 [![CI](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml/badge.svg)](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml)
 
+**Live: <https://delacroix-site.onrender.com>**
+
+The site is hosted on a free plan, so it sleeps after about fifteen minutes
+without traffic; the first visit after that takes roughly a minute to wake it.
+
 A web application about the painter Eugène Delacroix (1798–1863), featuring a
 biography, a gallery of paintings, exhibitions and reference links. Exhibitions
 and links are managed from inside the application by an administrator (CRUD).
@@ -293,13 +298,20 @@ The application is a plain Node server, so any host that runs Node works
 (Render, Railway, Fly.io). It reads the port from `PORT`, which those platforms
 set for you, so `npm start` is enough as a start command.
 
-`render.yaml` in the repository root is a ready blueprint for [Render](https://render.com):
+The application is deployed at <https://delacroix-site.onrender.com>.
 
-1. Push the repository to GitHub (already done).
+`render.yaml` in the repository root is the blueprint that produced it, so the
+deployment can be reproduced on [Render](https://render.com) in four steps:
+
+1. Push the repository to GitHub.
 2. Sign in to Render and choose **New > Blueprint**.
-3. Pick this repository. Render reads `render.yaml` and needs nothing else.
+3. Pick the repository. Render reads `render.yaml` and needs nothing else.
 4. The first build takes a couple of minutes, then the service gets a public
    `.onrender.com` address.
+
+Two files hold that address and need updating if it ever changes: the `og:url`
+and `og:image` tags in `public/index.html`, and the link at the top of this
+README.
 
 Two things to expect on the free plan. The service sleeps after roughly fifteen
 minutes without traffic, and the next visit takes about a minute to wake it, so
