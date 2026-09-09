@@ -4,13 +4,15 @@
       "id": 1,
       "name": "Μόνιμη συλλογή: το ατελιέ του ζωγράφου",
       "location": "Εθνικό Μουσείο Ευγένιου Ντελακρουά, Παρίσι",
-      "date": "1971-01-01"
+      "startDate": "1971-01-01",
+      "endDate": ""
     },
     {
       "id": 2,
       "name": "«Η Ελευθερία οδηγεί τον Λαό», μόνιμη έκθεση",
       "location": "Μουσείο του Λούβρου, Παρίσι",
-      "date": "1874-01-01"
+      "startDate": "1874-01-01",
+      "endDate": ""
     }
   ],
   "past": [
@@ -18,19 +20,22 @@
       "id": 3,
       "name": "Delacroix (1798–1863), αναδρομική έκθεση",
       "location": "Μουσείο του Λούβρου, Παρίσι",
-      "date": "2018-03-29"
+      "startDate": "2018-03-29",
+      "endDate": "2018-07-23"
     },
     {
       "id": 4,
       "name": "Delacroix",
       "location": "Metropolitan Museum of Art, Νέα Υόρκη",
-      "date": "2018-09-17"
+      "startDate": "2018-09-17",
+      "endDate": "2019-01-06"
     },
     {
       "id": 5,
       "name": "Delacroix and the Rise of Modern Art",
       "location": "National Gallery, Λονδίνο",
-      "date": "2016-02-17"
+      "startDate": "2016-02-17",
+      "endDate": "2016-05-22"
     }
   ]
 }

@@ -283,3 +283,33 @@ test('η αποθήκευση στέλνει τις παραγράφους χω�
     assert.ok(readsAfter > readsBefore, 'το cache ακυρώθηκε');
     app.close();
 });
+
+/* --------------------------- Εύρος ημερομηνιών --------------------------- */
+
+test('έκθεση χωρίς λήξη εμφανίζεται ως σε εξέλιξη', async () => {
+    const app = await loadApp();
+    await app.go('#/exhibitions/current');
+
+    const cells = [...app.main().querySelectorAll('.data-table tbody td')].map(td => td.textContent.trim());
+    assert.ok(cells.includes('1971-01-01'), 'φαίνεται η έναρξη');
+    assert.ok(cells.includes('σε εξέλιξη'), 'το κενό πεδίο λήξης γράφεται με λόγια');
+
+    const headers = [...app.main().querySelectorAll('.data-table th')].map(th => th.textContent.trim());
+    assert.deepEqual(headers, ['Όνομα', 'Τοποθεσία', 'Έναρξη', 'Λήξη']);
+    app.close();
+});
+
+test('η φόρμα εκθέσεων δεν ζητά κατηγορία, την εξηγεί', async () => {
+    const app = await loadApp({ session: { token: 't', role: 'admin', username: 'admin' } });
+    await app.go('#/admin/exhibitions');
+
+    assert.equal(app.document.getElementById('form-category'), null, 'δεν υπάρχει επιλογέας');
+    assert.match(app.main().querySelector('.form-note').textContent, /προκύπτει από τις ημερομηνίες/);
+
+    const fields = [...app.main().querySelectorAll('#resource-form input')].map(i => i.name);
+    assert.deepEqual(fields, ['name', 'location', 'startDate', 'endDate']);
+
+    const required = [...app.main().querySelectorAll('#resource-form input')].filter(i => i.required).map(i => i.name);
+    assert.deepEqual(required, ['name', 'location', 'startDate'], 'η λήξη είναι προαιρετική');
+    app.close();
+});

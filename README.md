@@ -73,9 +73,9 @@ The application runs at <http://localhost:3000> (or on the port given by the
 
 ### Tests
 
-`npm test` runs 46 tests, split between the server and the browser side.
+`npm test` runs 51 tests, split between the server and the browser side.
 
-The 26 server tests drive the real Express application over HTTP and cover
+The 29 server tests drive the real Express application over HTTP and cover
 authentication, role permissions, input validation, the full CRUD cycle
 including moving an entry between categories, concurrent writes, biography
 editing, and error handling. Each file starts its own copy of the app on an ephemeral port,
@@ -84,7 +84,7 @@ variable, so the suite never touches the real data files. Authentication has
 its own file because the login rate limiter keeps state per address, and
 `node --test` gives every file a separate process.
 
-The 20 client tests load `public/index.html` and `public/script.js` into jsdom
+The 22 client tests load `public/index.html` and `public/script.js` into jsdom
 with a stubbed `fetch`, so the page code runs exactly as written, without a
 server or a browser. They cover the hash routing and its defaults, the active
 menu marking, the guard on the admin routes, escaping of hostile titles and
@@ -181,14 +181,20 @@ Each JSON file is an object keyed by category, and every entry carries a unique
 ```json
 {
   "current": [
-    { "id": 1, "name": "...", "location": "...", "date": "2025-03-15" }
+    { "id": 1, "name": "...", "location": "...", "startDate": "2026-03-15", "endDate": "" }
   ],
   "past": []
 }
 ```
 
-`POST` and `PUT` bodies also include a `category` field. If a `PUT` is given a
-different category, the entry is moved into it.
+`POST` and `PUT` bodies for paintings and links also include a `category` field.
+If a `PUT` is given a different category, the entry is moved into it.
+
+Exhibitions are the exception: their category is not chosen but derived from the
+dates. An exhibition with no `endDate` counts as permanent and therefore current;
+otherwise it is current until its end date passes, and past afterwards. A
+`category` sent with the request is ignored, so the two lists cannot drift out of
+step with the dates on display.
 
 A painting carries `title` and `image` (both required) plus the optional `year`,
 `technique` and `museum`, which are shown under the thumbnail and in the

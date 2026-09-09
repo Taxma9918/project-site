@@ -350,6 +350,12 @@ button.danger:hover {
     margin: 0.5rem 0 0;
 }
 
+.form-note {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+}
+
 .saved {
     color: #1b5e20;
     font-weight: bold;

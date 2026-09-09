@@ -42,7 +42,7 @@ test('η βιογραφία έχει τίτλο και παραγράφους', 
 
 test('η εγγραφή χωρίς token απορρίπτεται με 401', async () => {
     const { status } = await server.request('POST', '/api/exhibitions', {
-        body: { category: 'current', name: 'X', location: 'Y', date: '2026-01-01' }
+        body: { name: 'X', location: 'Y', startDate: '2026-01-01' }
     });
     assert.equal(status, 401);
 });
@@ -50,7 +50,7 @@ test('η εγγραφή χωρίς token απορρίπτεται με 401', asy
 test('ο απλός χρήστης δεν μπορεί να γράψει (403)', async () => {
     const { status } = await server.request('POST', '/api/exhibitions', {
         token: userToken,
-        body: { category: 'current', name: 'X', location: 'Y', date: '2026-01-01' }
+        body: { name: 'X', location: 'Y', startDate: '2026-01-01' }
     });
     assert.equal(status, 403);
 });
@@ -58,7 +58,7 @@ test('ο απλός χρήστης δεν μπορεί να γράψει (403)',
 test('ο διαχειριστής μπορεί να γράψει', async () => {
     const { status, data } = await server.request('POST', '/api/exhibitions', {
         token: adminToken,
-        body: { category: 'current', name: 'Δοκιμή', location: 'Αθήνα', date: '2026-01-01' }
+        body: { name: 'Δοκιμή', location: 'Αθήνα', startDate: '2026-01-01' }
     });
     assert.equal(status, 201);
     assert.equal(data.item.name, 'Δοκιμή');
@@ -68,9 +68,12 @@ test('ο διαχειριστής μπορεί να γράψει', async () => {
 
 test('τα υποχρεωτικά πεδία ελέγχονται', async () => {
     const cases = [
-        [{ category: 'current', name: '', location: 'Αθήνα', date: '2026-01-01' }, 'όνομα'],
-        [{ category: 'current', name: 'X', location: '', date: '2026-01-01' }, 'τοποθεσία'],
-        [{ category: 'current', name: 'X', location: 'Αθήνα', date: '01/01/2026' }, 'ημερομηνία']
+        [{ name: '', location: 'Αθήνα', startDate: '2026-01-01' }, 'όνομα'],
+        [{ name: 'X', location: '', startDate: '2026-01-01' }, 'τοποθεσία'],
+        [{ name: 'X', location: 'Αθήνα', startDate: '01/01/2026' }, 'μορφή έναρξης'],
+        [{ name: 'X', location: 'Αθήνα' }, 'έναρξη υποχρεωτική'],
+        [{ name: 'X', location: 'Αθήνα', startDate: '2026-01-01', endDate: 'χθες' }, 'μορφή λήξης'],
+        [{ name: 'X', location: 'Αθήνα', startDate: '2026-05-01', endDate: '2026-04-01' }, 'λήξη πριν την έναρξη']
     ];
     for (const [body] of cases) {
         const { status, data } = await server.request('POST', '/api/exhibitions', { token: adminToken, body });
@@ -99,9 +102,9 @@ test('η εικόνα πίνακα δεν μπορεί να δείχνει έξ�
 });
 
 test('άγνωστη κατηγορία απορρίπτεται', async () => {
-    const { status } = await server.request('POST', '/api/exhibitions', {
+    const { status } = await server.request('POST', '/api/links', {
         token: adminToken,
-        body: { category: 'δεν-υπάρχει', name: 'X', location: 'Y', date: '2026-01-01' }
+        body: { category: 'δεν-υπάρχει', name: 'X', url: 'https://example.org' }
     });
     assert.equal(status, 400);
 });
@@ -112,17 +115,16 @@ test('ο client δεν μπορεί να πλαστογραφήσει το id ή
     const { data } = await server.request('POST', '/api/exhibitions', {
         token: adminToken,
         body: {
-            category: 'current',
             id: 9999,
             name: 'Έλεγχος πεδίων',
             location: 'Αθήνα',
-            date: '2026-02-02',
+            startDate: '2026-02-02',
             role: 'admin',
             evil: '<script>'
         }
     });
     assert.notEqual(data.item.id, 9999, 'το id πρέπει να παράγεται από τον server');
-    assert.deepEqual(Object.keys(data.item).sort(), ['date', 'id', 'location', 'name']);
+    assert.deepEqual(Object.keys(data.item).sort(), ['id', 'location', 'name', 'startDate']);
 });
 
 test('τα προαιρετικά πεδία πίνακα αποθηκεύονται', async () => {
@@ -147,13 +149,14 @@ test('τα προαιρετικά πεδία πίνακα αποθηκεύοντ
 test('πλήρης κύκλος: δημιουργία, ενημέρωση, μετακίνηση κατηγορίας, διαγραφή', async () => {
     const created = await server.request('POST', '/api/exhibitions', {
         token: adminToken,
-        body: { category: 'current', name: 'Κύκλος', location: 'Αθήνα', date: '2026-03-03' }
+        body: { name: 'Κύκλος', location: 'Αθήνα', startDate: '2026-03-03', endDate: '2099-01-01' }
     });
     const { id } = created.data.item;
 
+    // Ημερομηνία λήξης στο παρελθόν: η έκθεση πρέπει να μεταπηδήσει μόνη της.
     const updated = await server.request('PUT', `/api/exhibitions/${id}`, {
         token: adminToken,
-        body: { category: 'past', name: 'Κύκλος 2', location: 'Πάτρα', date: '2020-03-03' }
+        body: { name: 'Κύκλος 2', location: 'Πάτρα', startDate: '2020-03-03', endDate: '2020-04-04' }
     });
     assert.equal(updated.status, 200);
     assert.equal(updated.data.item.name, 'Κύκλος 2');
@@ -173,7 +176,7 @@ test('πλήρης κύκλος: δημιουργία, ενημέρωση, με�
 test('ενημέρωση ή διαγραφή ανύπαρκτης εγγραφής δίνει 404', async () => {
     const put = await server.request('PUT', '/api/exhibitions/999999', {
         token: adminToken,
-        body: { category: 'current', name: 'X', location: 'Y', date: '2026-01-01' }
+        body: { name: 'X', location: 'Y', startDate: '2026-01-01' }
     });
     assert.equal(put.status, 404);
 
@@ -265,4 +268,47 @@ test('η ενημέρωση βιογραφίας καθαρίζει τα κεν�
     const after = await server.request('GET', '/api/biography');
     assert.deepEqual(after.data.birth, updated.data.section, 'η αλλαγή διαβάζεται πίσω');
     assert.deepEqual(after.data.career, otherBefore, 'η άλλη ενότητα δεν άλλαξε');
+});
+
+/* ------------------- Κατηγορία εκθέσεων από ημερομηνίες ------------------- */
+
+test('η κατηγορία της έκθεσης προκύπτει από τις ημερομηνίες, όχι από τον client', async () => {
+    // Ο client ζητά "past", αλλά η έκθεση δεν έχει λήξει ακόμη.
+    const created = await server.request('POST', '/api/exhibitions', {
+        token: adminToken,
+        body: {
+            category: 'past',
+            name: 'Ψεύτικη κατηγορία',
+            location: 'Αθήνα',
+            startDate: '2020-01-01',
+            endDate: '2099-12-31'
+        }
+    });
+    assert.equal(created.status, 201);
+
+    const data = await server.request('GET', '/api/exhibitions');
+    assert.ok(data.data.current.some(item => item.id === created.data.item.id),
+        'κατατάχθηκε στις τρέχουσες παρά το αίτημα');
+    assert.ok(!data.data.past.some(item => item.id === created.data.item.id));
+});
+
+test('έκθεση χωρίς ημερομηνία λήξης θεωρείται μόνιμη, άρα τρέχουσα', async () => {
+    const created = await server.request('POST', '/api/exhibitions', {
+        token: adminToken,
+        body: { name: 'Μόνιμη', location: 'Παρίσι', startDate: '1900-01-01' }
+    });
+    assert.equal(created.status, 201);
+
+    const data = await server.request('GET', '/api/exhibitions');
+    assert.ok(data.data.current.some(item => item.id === created.data.item.id));
+});
+
+test('έκθεση με λήξη στο παρελθόν κατατάσσεται στις παρελθούσες', async () => {
+    const created = await server.request('POST', '/api/exhibitions', {
+        token: adminToken,
+        body: { name: 'Τελειωμένη', location: 'Λονδίνο', startDate: '2016-02-17', endDate: '2016-05-22' }
+    });
+
+    const data = await server.request('GET', '/api/exhibitions');
+    assert.ok(data.data.past.some(item => item.id === created.data.item.id));
 });

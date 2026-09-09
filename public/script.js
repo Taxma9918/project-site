@@ -343,15 +343,20 @@ const RESOURCES = {
     exhibitions: {
         title: 'Εκθέσεις',
         categories: { current: 'Τρέχουσες Εκθέσεις', past: 'Παρελθούσες Εκθέσεις' },
+        // Η κατηγορία προκύπτει στον server από τις ημερομηνίες, οπότε η φόρμα
+        // δεν εμφανίζει επιλογέα: δεν έχει νόημα να τη διαλέγει ο χρήστης.
+        derivedCategory: true,
         columns: () => [
             { key: 'name', label: 'Όνομα' },
             { key: 'location', label: 'Τοποθεσία' },
-            { key: 'date', label: 'Ημερομηνία' }
+            { key: 'startDate', label: 'Έναρξη' },
+            { key: 'endDate', label: 'Λήξη', format: value => value || 'σε εξέλιξη' }
         ],
         fields: () => [
             { name: 'name', label: 'Όνομα', type: 'text', required: true },
             { name: 'location', label: 'Τοποθεσία', type: 'text', required: true },
-            { name: 'date', label: 'Ημερομηνία', type: 'date', required: true }
+            { name: 'startDate', label: 'Έναρξη', type: 'date', required: true },
+            { name: 'endDate', label: 'Λήξη (κενό για μόνιμη έκθεση)', type: 'date' }
         ]
     },
     links: {
@@ -373,7 +378,8 @@ function renderCell(item, column) {
     if (column.type === 'link') {
         return `<a href="${esc(safeUrl(value))}" target="_blank" rel="noopener noreferrer">${esc(value)}</a>`;
     }
-    return esc(value);
+    // Η μορφοποίηση τρέχει πριν το escaping, ώστε το αποτέλεσμα να παραμένει ασφαλές.
+    return esc(column.format ? column.format(value) : value);
 }
 
 function renderTable(columns, items, extraColumn = null) {
@@ -559,14 +565,19 @@ async function manageResource(resource) {
 
             <form id="resource-form" class="resource-form">
                 <h3>${editing ? 'Επεξεργασία καταχώρησης' : 'Νέα καταχώρηση'}</h3>
-                <label for="form-category">Κατηγορία</label>
-                <select id="form-category" name="category">
-                    ${categories.map(key => `
-                        <option value="${esc(key)}" ${key === formCategory ? 'selected' : ''}>
-                            ${esc(config.categories[key])}
-                        </option>
-                    `).join('')}
-                </select>
+                ${config.derivedCategory ? `
+                    <p class="form-note">Η κατηγορία προκύπτει από τις ημερομηνίες: μια
+                    έκθεση χωρίς λήξη, ή με λήξη στο μέλλον, εμφανίζεται στις τρέχουσες.</p>
+                ` : `
+                    <label for="form-category">Κατηγορία</label>
+                    <select id="form-category" name="category">
+                        ${categories.map(key => `
+                            <option value="${esc(key)}" ${key === formCategory ? 'selected' : ''}>
+                                ${esc(config.categories[key])}
+                            </option>
+                        `).join('')}
+                    </select>
+                `}
                 ${config.fields(formCategory).map(field => `
                     <label for="form-${esc(field.name)}">${esc(field.label)}</label>
                     <input type="${esc(field.type)}" id="form-${esc(field.name)}" name="${esc(field.name)}"
@@ -600,8 +611,9 @@ function wireManageForm(resource, data) {
     const categorySelect = document.getElementById('form-category');
 
     // Τα πεδία των συνδέσμων αλλάζουν ανάλογα με την κατηγορία, οπότε
-    // ξαναχτίζουμε τη φόρμα με την επιλεγμένη κατηγορία.
-    categorySelect.addEventListener('change', () => {
+    // ξαναχτίζουμε τη φόρμα με την επιλεγμένη κατηγορία. Στους πόρους που
+    // παράγουν μόνοι τους κατηγορία δεν υπάρχει επιλογέας.
+    categorySelect?.addEventListener('change', () => {
         formCategory = categorySelect.value;
         manageResource(resource);
     });

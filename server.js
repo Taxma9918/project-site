@@ -241,7 +241,7 @@ function findItem(data, id) {
  * Δημιουργεί τα CRUD endpoints για έναν πόρο, ώστε να μην
  * επαναλαμβάνεται ο ίδιος κώδικας για πίνακες, εκθέσεις και συνδέσμους.
  */
-function registerResource(resource, { fields, validate }) {
+function registerResource(resource, { fields, validate, deriveCategory }) {
     const base = `/api/${resource}`;
 
     /**
@@ -271,15 +271,19 @@ function registerResource(resource, { fields, validate }) {
                 const body = req.body || {};
                 const data = await readData(resource);
 
-                if (!Object.prototype.hasOwnProperty.call(data, body.category)) {
+                // Όταν ο πόρος παράγει μόνος του την κατηγορία, ό,τι στέλνει ο
+                // client αγνοείται· αλλιώς πρέπει να είναι υπαρκτή.
+                const requested = body.category;
+                if (!deriveCategory && !Object.prototype.hasOwnProperty.call(data, requested)) {
                     return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
                 }
-                const values = sanitize(body.category, body);
-                const problem = validate(body.category, values);
+                const values = sanitize(requested, body);
+                const problem = validate(requested, values);
                 if (problem) return res.status(400).json({ success: false, message: problem });
 
+                const category = deriveCategory ? deriveCategory(values) : requested;
                 const item = { id: nextId(data), ...values };
-                data[body.category].push(item);
+                data[category].push(item);
                 await writeData(resource, data);
                 res.status(201).json({ success: true, item });
             });
@@ -299,13 +303,15 @@ function registerResource(resource, { fields, validate }) {
                     return res.status(404).json({ success: false, message: 'Δεν βρέθηκε.' });
                 }
 
-                const category = body.category ?? found.category;
-                if (!Object.prototype.hasOwnProperty.call(data, category)) {
+                const requested = body.category ?? found.category;
+                if (!deriveCategory && !Object.prototype.hasOwnProperty.call(data, requested)) {
                     return res.status(400).json({ success: false, message: 'Άγνωστη κατηγορία.' });
                 }
-                const values = sanitize(category, body);
-                const problem = validate(category, values);
+                const values = sanitize(requested, body);
+                const problem = validate(requested, values);
                 if (problem) return res.status(400).json({ success: false, message: problem });
+
+                const category = deriveCategory ? deriveCategory(values) : requested;
 
                 const item = { id, ...values };
                 if (category === found.category) {
@@ -361,14 +367,30 @@ registerResource('paintings', {
     }
 });
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Η σημερινή ημερομηνία σε μορφή ΕΕΕΕ-ΜΜ-ΗΗ, ίδια με αυτήν των δεδομένων. */
+function today() {
+    return new Date().toISOString().slice(0, 10);
+}
+
 registerResource('exhibitions', {
-    fields: () => ['name', 'location', 'date'],
-    validate: (category, { name, location, date }) => {
+    fields: () => ['name', 'location', 'startDate', 'endDate'],
+    validate: (category, { name, location, startDate, endDate }) => {
         if (!nonEmpty(name)) return 'Το όνομα είναι υποχρεωτικό.';
         if (!nonEmpty(location)) return 'Η τοποθεσία είναι υποχρεωτική.';
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return 'Η ημερομηνία πρέπει να έχει μορφή ΕΕΕΕ-ΜΜ-ΗΗ.';
+        if (!ISO_DATE.test(startDate || '')) return 'Η έναρξη πρέπει να έχει μορφή ΕΕΕΕ-ΜΜ-ΗΗ.';
+        if (endDate && !ISO_DATE.test(endDate)) return 'Η λήξη πρέπει να έχει μορφή ΕΕΕΕ-ΜΜ-ΗΗ.';
+        if (endDate && endDate < startDate) return 'Η λήξη δεν μπορεί να προηγείται της έναρξης.';
         return null;
-    }
+    },
+    /**
+     * Το αν μια έκθεση είναι τρέχουσα ή παρελθούσα δεν το επιλέγει ο χρήστης:
+     * προκύπτει από τις ημερομηνίες. Χωρίς ημερομηνία λήξης θεωρείται μόνιμη,
+     * άρα πάντα τρέχουσα. Οι συγκρίσεις γίνονται σε μορφή ΕΕΕΕ-ΜΜ-ΗΗ, όπου η
+     * αλφαβητική σειρά συμπίπτει με τη χρονολογική.
+     */
+    deriveCategory: ({ endDate }) => (!endDate || endDate >= today() ? 'current' : 'past')
 });
 
 registerResource('links', {

@@ -23,8 +23,9 @@ const FIXTURES = {
         ]
     },
     '/api/exhibitions': {
-        current: [{ id: 1, name: 'Τρέχουσα έκθεση', location: 'Παρίσι', date: '2026-01-01' }],
-        past: [{ id: 2, name: 'Παλιά έκθεση', location: 'Λονδίνο', date: '2016-02-17' }]
+        // Η μόνιμη έκθεση δεν έχει ημερομηνία λήξης.
+        current: [{ id: 1, name: 'Μόνιμη έκθεση', location: 'Παρίσι', startDate: '1971-01-01', endDate: '' }],
+        past: [{ id: 2, name: 'Παλιά έκθεση', location: 'Λονδίνο', startDate: '2016-02-17', endDate: '2016-05-22' }]
     },
     '/api/links': {
         web_links: [
