@@ -2,10 +2,11 @@
 
 [![CI](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml/badge.svg)](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml)
 
-**Live: <https://delacroix-site.onrender.com>**
+**Deployed at <https://delacroix-site.onrender.com>**
 
-The site is hosted on a free plan, so it sleeps after about fifteen minutes
-without traffic; the first visit after that takes roughly a minute to wake it.
+The service runs on a free plan and is kept suspended between demonstrations,
+so the address answers only while it is resumed; `render.yaml` rebuilds the
+whole deployment in a couple of minutes either way.
 
 A web application about the painter Eugène Delacroix (1798–1863), featuring a
 biography, a gallery of paintings, exhibitions and reference links. Exhibitions
@@ -298,7 +299,10 @@ The application is a plain Node server, so any host that runs Node works
 (Render, Railway, Fly.io). It reads the port from `PORT`, which those platforms
 set for you, so `npm start` is enough as a start command.
 
-The application is deployed at <https://delacroix-site.onrender.com>.
+The application is deployed at <https://delacroix-site.onrender.com>, though
+the service is normally suspended and resumed from the Render dashboard when
+it is needed. A suspended service answers `503` and does not start itself, so
+it has to be resumed a few minutes before anyone is shown the link.
 
 `render.yaml` in the repository root is the blueprint that produced it, so the
 deployment can be reproduced on [Render](https://render.com) in four steps:
@@ -313,14 +317,14 @@ Two files hold that address and need updating if it ever changes: the `og:url`
 and `og:image` tags in `public/index.html`, and the link at the top of this
 README.
 
-Two things to expect on the free plan. The service sleeps after roughly fifteen
-minutes without traffic, and the next visit takes about a minute to wake it, so
-open the link before a presentation rather than during one. And the filesystem
-is ephemeral: the data lives in JSON files next to the code, so the `data/`
-folder is rewritten from the repository on every restart and redeploy, and
-anything added through the admin screens disappears. For a demo that is usually
-fine; making it permanent means replacing the JSON files with a real database,
-or mounting a persistent disk at `data/`, which needs a paid plan.
+Two things to expect on the free plan. A running service still sleeps after
+roughly fifteen minutes without traffic and takes about a minute to wake, so the
+link is worth opening before a presentation rather than during one. And the
+filesystem is ephemeral: the data lives in JSON files next to the code, so the
+`data/` folder is rewritten from the repository on every restart and redeploy,
+and anything added through the admin screens disappears. For a demo that is
+usually fine; making it permanent means replacing the JSON files with a real
+database, or mounting a persistent disk at `data/`, which needs a paid plan.
 
 ## Licence and credits
 
