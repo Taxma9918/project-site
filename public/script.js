@@ -437,7 +437,7 @@ let formCategory = null;
 
 async function showAdmin(resource) {
     if (resource) {
-        if (!RESOURCES[resource]) {
+        if (resource !== 'biography' && !RESOURCES[resource]) {
             showError('Άγνωστη ενότητα διαχείρισης.');
             return;
         }
@@ -446,7 +446,8 @@ async function showAdmin(resource) {
             navigate('admin');
             return;
         }
-        await manageResource(resource);
+        if (resource === 'biography') await manageBiography();
+        else await manageResource(resource);
         return;
     }
 
@@ -455,6 +456,94 @@ async function showAdmin(resource) {
     mainContent.innerHTML = session
         ? `<h2>Διαχείριση</h2><p>Συνδεδεμένος ως <strong>${esc(session.username)}</strong>.</p>`
         : '<h2>Διαχείριση</h2><p>Εισάγετε στοιχεία διαχειριστή ή επισκέπτη.</p>';
+}
+
+// Ποια ενότητα βιογραφίας είναι ανοιχτή στη φόρμα.
+let biographySection = null;
+
+/**
+ * Η βιογραφία δεν έχει εγγραφές με id, οπότε δεν περνά από τη γενική φόρμα:
+ * κάθε ενότητα έχει έναν τίτλο και τις παραγράφους της.
+ */
+async function manageBiography() {
+    try {
+        const data = await api('/api/biography');
+        const sections = Object.keys(data);
+        if (!sections.includes(biographySection)) biographySection = sections[0];
+        const entry = data[biographySection];
+
+        mainContent.innerHTML = `
+            <h2>Διαχείριση: Βιογραφία</h2>
+
+            <form id="biography-form" class="resource-form">
+                <label for="bio-section">Ενότητα</label>
+                <select id="bio-section">
+                    ${sections.map(key => `
+                        <option value="${esc(key)}" ${key === biographySection ? 'selected' : ''}>
+                            ${esc(data[key].title)}
+                        </option>
+                    `).join('')}
+                </select>
+
+                <label for="bio-title">Τίτλος</label>
+                <input type="text" id="bio-title" value="${esc(entry.title)}" required>
+
+                <label for="bio-paragraphs">Κείμενο (αφήστε κενή γραμμή ανάμεσα στις παραγράφους)</label>
+                <textarea id="bio-paragraphs" rows="18" required>${esc(entry.paragraphs.join('\n\n'))}</textarea>
+
+                <div class="form-actions">
+                    <button type="submit">Αποθήκευση</button>
+                </div>
+                <p id="form-error" class="error" role="alert" hidden></p>
+                <p id="form-saved" class="saved" role="status" hidden>Οι αλλαγές αποθηκεύτηκαν.</p>
+            </form>
+        `;
+
+        wireBiographyForm();
+    } catch (error) {
+        console.error('Error loading biography:', error);
+        showError(error.message);
+    }
+}
+
+function wireBiographyForm() {
+    const form = document.getElementById('biography-form');
+    const formError = document.getElementById('form-error');
+    const saved = document.getElementById('form-saved');
+
+    document.getElementById('bio-section').addEventListener('change', event => {
+        biographySection = event.target.value;
+        manageBiography();
+    });
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        formError.hidden = true;
+        saved.hidden = true;
+
+        // Οι παράγραφοι χωρίζονται με κενή γραμμή, όπως λέει η ετικέτα.
+        const paragraphs = document.getElementById('bio-paragraphs').value
+            .split(/\n\s*\n/)
+            .map(text => text.trim())
+            .filter(Boolean);
+
+        try {
+            await api(`/api/biography/${encodeURIComponent(biographySection)}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    title: document.getElementById('bio-title').value,
+                    paragraphs
+                })
+            });
+            // Η δημόσια προβολή κρατά το κείμενο στη μνήμη: το ακυρώνουμε,
+            // αλλιώς θα συνέχιζε να δείχνει την παλιά έκδοση.
+            biography = null;
+            saved.hidden = false;
+        } catch (error) {
+            formError.textContent = error.message;
+            formError.hidden = false;
+        }
+    });
 }
 
 async function manageResource(resource) {

@@ -240,3 +240,46 @@ test('χωρίς συνεδρία εμφανίζεται η φόρμα σύνδ�
     assert.ok(app.document.getElementById('session-section').classList.contains('hidden'));
     app.close();
 });
+
+/* --------------------- Διαχείριση βιογραφίας --------------------- */
+
+test('η οθόνη βιογραφίας φορτώνει την ενότητα σε επεξεργάσιμη μορφή', async () => {
+    const app = await loadApp({ session: { token: 't', role: 'admin', username: 'admin' } });
+    await app.go('#/admin/biography');
+
+    assert.match(app.main().querySelector('h2').textContent, /Διαχείριση: Βιογραφία/);
+    assert.equal(app.document.getElementById('bio-title').value, 'Γέννηση');
+
+    const text = app.document.getElementById('bio-paragraphs').value;
+    assert.equal(text, 'Πρώτη παράγραφος.\n\nΔεύτερη παράγραφος.',
+        'οι παράγραφοι χωρίζονται με κενή γραμμή');
+
+    const options = [...app.document.querySelectorAll('#bio-section option')].map(o => o.value);
+    assert.deepEqual(options, ['birth', 'career']);
+    app.close();
+});
+
+test('η αποθήκευση στέλνει τις παραγράφους χωρισμένες και ακυρώνει το cache', async () => {
+    const app = await loadApp({ session: { token: 't', role: 'admin', username: 'admin' } });
+
+    // Πρώτα διαβάζουμε τη βιογραφία, ώστε να μπει στη μνήμη του client.
+    await app.go('#/bio/birth');
+    const readsBefore = app.calls.filter(c => c.url === '/api/biography').length;
+
+    await app.go('#/admin/biography');
+    app.document.getElementById('bio-paragraphs').value = 'Πρώτη.\n\n\n  Δεύτερη.  \n\nΤρίτη.';
+    app.document.getElementById('biography-form').dispatchEvent(
+        new app.window.Event('submit', { bubbles: true, cancelable: true }));
+    await app.settle();
+
+    const put = app.calls.find(c => c.method === 'PUT' && c.url.startsWith('/api/biography/'));
+    assert.ok(put, 'στάλθηκε PUT');
+    assert.equal(app.document.getElementById('form-saved').hidden, false, 'φαίνεται η επιβεβαίωση');
+
+    // Μετά την αποθήκευση, η δημόσια προβολή πρέπει να ξαναζητήσει το κείμενο
+    // αντί να δείξει την παλιά έκδοση από τη μνήμη.
+    await app.go('#/bio/birth');
+    const readsAfter = app.calls.filter(c => c.url === '/api/biography').length;
+    assert.ok(readsAfter > readsBefore, 'το cache ακυρώθηκε');
+    app.close();
+});

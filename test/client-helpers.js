@@ -66,6 +66,9 @@ async function loadApp({ session = null } = {}) {
             return json({ success: true, token: 'test-token', role: 'admin', username: 'admin' });
         }
         if (endpoint === '/api/logout') return json({ success: true });
+        if (endpoint.startsWith('/api/biography/')) {
+            return json({ success: true, section: { title: 'Αποθηκευμένο', paragraphs: ['Κείμενο.'] } });
+        }
         if (FIXTURES[endpoint]) return json(FIXTURES[endpoint]);
 
         return { ok: false, status: 404, json: async () => ({ message: 'Άγνωστο endpoint.' }) };

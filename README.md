@@ -73,18 +73,18 @@ The application runs at <http://localhost:3000> (or on the port given by the
 
 ### Tests
 
-`npm test` runs 40 tests, split between the server and the browser side.
+`npm test` runs 46 tests, split between the server and the browser side.
 
-The 22 server tests drive the real Express application over HTTP and cover
+The 26 server tests drive the real Express application over HTTP and cover
 authentication, role permissions, input validation, the full CRUD cycle
-including moving an entry between categories, concurrent writes, and error
-handling. Each file starts its own copy of the app on an ephemeral port,
+including moving an entry between categories, concurrent writes, biography
+editing, and error handling. Each file starts its own copy of the app on an ephemeral port,
 pointed at a temporary copy of `data/` through the `DATA_DIR` environment
 variable, so the suite never touches the real data files. Authentication has
 its own file because the login rate limiter keeps state per address, and
 `node --test` gives every file a separate process.
 
-The 18 client tests load `public/index.html` and `public/script.js` into jsdom
+The 20 client tests load `public/index.html` and `public/script.js` into jsdom
 with a stubbed `fetch`, so the page code runs exactly as written, without a
 server or a browser. They cover the hash routing and its defaults, the active
 menu marking, the guard on the admin routes, escaping of hostile titles and
@@ -158,7 +158,8 @@ test/                  Test suite (node:test)
 | `POST`   | `/api/login`            | Sign in, returns a token and a role   |
 | `POST`   | `/api/logout`           | Invalidate the token                  |
 | `GET`    | `/api/me`               | Verify a token, returns the user      |
-| `GET`    | `/api/biography`        | Biography text (read-only)            |
+| `GET`    | `/api/biography`        | Biography text                        |
+| `PUT`    | `/api/biography/:section` | Update one biography section        |
 | `GET`    | `/api/paintings`        | All paintings, grouped by category    |
 | `POST`   | `/api/paintings`        | Create a painting                     |
 | `PUT`    | `/api/paintings/:id`    | Update a painting                     |

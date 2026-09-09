@@ -17,10 +17,9 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DATA_FILES = {
     paintings: path.join(DATA_DIR, 'paintings.json'),
     exhibitions: path.join(DATA_DIR, 'exhibitions.json'),
-    links: path.join(DATA_DIR, 'links.json')
+    links: path.join(DATA_DIR, 'links.json'),
+    biography: path.join(DATA_DIR, 'biography.json')
 };
-
-const BIOGRAPHY_FILE = path.join(DATA_DIR, 'biography.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 // Διάρκεια ζωής μιας συνεδρίας χωρίς δραστηριότητα.
@@ -385,11 +384,44 @@ registerResource('links', {
     }
 });
 
-// Η βιογραφία είναι στατικό κείμενο και δεν έχει κατηγορίες με εγγραφές, οπότε
-// δεν περνά από το registerResource: εκτίθεται μόνο για ανάγνωση.
+/* ---------------------------------------------------------------- *
+ * Βιογραφία
+ * Δεν περνά από το registerResource: η δομή της δεν είναι κατηγορίες με
+ * λίστες εγγραφών, αλλά ενότητες με τίτλο και παραγράφους.
+ * ---------------------------------------------------------------- */
 app.get('/api/biography', async (req, res, next) => {
     try {
-        res.json(JSON.parse(await fs.readFile(BIOGRAPHY_FILE, 'utf8')));
+        res.json(await readData('biography'));
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.put('/api/biography/:section', requireAdmin, async (req, res, next) => {
+    try {
+        await withLock('biography', async () => {
+            const body = req.body || {};
+            const data = await readData('biography');
+
+            if (!Object.prototype.hasOwnProperty.call(data, req.params.section)) {
+                return res.status(404).json({ success: false, message: 'Η ενότητα δεν βρέθηκε.' });
+            }
+            if (!nonEmpty(body.title)) {
+                return res.status(400).json({ success: false, message: 'Ο τίτλος είναι υποχρεωτικός.' });
+            }
+
+            const paragraphs = Array.isArray(body.paragraphs)
+                ? body.paragraphs.filter(nonEmpty).map(text => text.trim())
+                : [];
+            if (paragraphs.length === 0) {
+                return res.status(400).json({ success: false, message: 'Χρειάζεται τουλάχιστον μία παράγραφος.' });
+            }
+
+            const section = { title: body.title.trim(), paragraphs };
+            data[req.params.section] = section;
+            await writeData('biography', data);
+            res.json({ success: true, section });
+        });
     } catch (error) {
         next(error);
     }

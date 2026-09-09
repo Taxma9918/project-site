@@ -290,7 +290,8 @@ figcaption {
 }
 
 input,
-select {
+select,
+textarea {
     padding: 0.45rem 0.5rem;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -347,6 +348,17 @@ button.danger:hover {
     color: var(--danger);
     font-weight: bold;
     margin: 0.5rem 0 0;
+}
+
+.saved {
+    color: #1b5e20;
+    font-weight: bold;
+    margin: 0.5rem 0 0;
+}
+
+textarea {
+    resize: vertical;
+    line-height: 1.5;
 }
 
 /* ------------------------------ Lightbox ------------------------------ */

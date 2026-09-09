@@ -215,3 +215,54 @@ test('χαλασμένο JSON δίνει 400 και όχι 500', async () => {
     assert.equal(status, 400);
     assert.equal(data.success, false);
 });
+
+/* ------------------------------ Βιογραφία ------------------------------ */
+
+test('η βιογραφία ενημερώνεται μόνο από διαχειριστή', async () => {
+    const body = { title: 'Νέος τίτλος', paragraphs: ['Μία παράγραφος.'] };
+
+    const anonymous = await server.request('PUT', '/api/biography/birth', { body });
+    assert.equal(anonymous.status, 401);
+
+    const visitor = await server.request('PUT', '/api/biography/birth', { token: userToken, body });
+    assert.equal(visitor.status, 403);
+});
+
+test('άγνωστη ενότητα βιογραφίας δίνει 404', async () => {
+    const { status } = await server.request('PUT', '/api/biography/δεν-υπάρχει', {
+        token: adminToken,
+        body: { title: 'X', paragraphs: ['Y'] }
+    });
+    assert.equal(status, 404);
+});
+
+test('η βιογραφία απαιτεί τίτλο και τουλάχιστον μία παράγραφο', async () => {
+    const cases = [
+        { title: '', paragraphs: ['Κείμενο.'] },
+        { title: 'Τίτλος', paragraphs: [] },
+        { title: 'Τίτλος', paragraphs: ['   ', ''] },
+        { title: 'Τίτλος', paragraphs: 'όχι πίνακας' }
+    ];
+    for (const body of cases) {
+        const { status, data } = await server.request('PUT', '/api/biography/birth', { token: adminToken, body });
+        assert.equal(status, 400, `το ${JSON.stringify(body)} έπρεπε να απορριφθεί`);
+        assert.ok(data.message.length > 0);
+    }
+});
+
+test('η ενημέρωση βιογραφίας καθαρίζει τα κενά και αφήνει ήσυχες τις άλλες ενότητες', async () => {
+    const before = await server.request('GET', '/api/biography');
+    const otherBefore = before.data.career;
+
+    const updated = await server.request('PUT', '/api/biography/birth', {
+        token: adminToken,
+        body: { title: '  Γέννηση  ', paragraphs: ['  Πρώτη.  ', '   ', 'Δεύτερη.'] }
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.data.section.title, 'Γέννηση', 'ο τίτλος καθαρίζεται');
+    assert.deepEqual(updated.data.section.paragraphs, ['Πρώτη.', 'Δεύτερη.'], 'οι κενές παράγραφοι πέφτουν');
+
+    const after = await server.request('GET', '/api/biography');
+    assert.deepEqual(after.data.birth, updated.data.section, 'η αλλαγή διαβάζεται πίσω');
+    assert.deepEqual(after.data.career, otherBefore, 'η άλλη ενότητα δεν άλλαξε');
+});
