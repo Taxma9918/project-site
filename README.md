@@ -2,12 +2,6 @@
 
 [![CI](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml/badge.svg)](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml)
 
-**Deployed at <https://delacroix-site.onrender.com>**
-
-The service runs on a free plan and is kept suspended between demonstrations,
-so the address answers only while it is resumed; `render.yaml` rebuilds the
-whole deployment in a couple of minutes either way.
-
 A web application about the painter Eugène Delacroix (1798–1863), featuring a
 biography, a gallery of paintings, exhibitions and reference links. Exhibitions
 and links are managed from inside the application by an administrator (CRUD).
@@ -299,13 +293,9 @@ The application is a plain Node server, so any host that runs Node works
 (Render, Railway, Fly.io). It reads the port from `PORT`, which those platforms
 set for you, so `npm start` is enough as a start command.
 
-The application is deployed at <https://delacroix-site.onrender.com>, though
-the service is normally suspended and resumed from the Render dashboard when
-it is needed. A suspended service answers `503` and does not start itself, so
-it has to be resumed a few minutes before anyone is shown the link.
-
-`render.yaml` in the repository root is the blueprint that produced it, so the
-deployment can be reproduced on [Render](https://render.com) in four steps:
+`render.yaml` in the repository root is a ready blueprint for
+[Render](https://render.com), and the deployment has been carried out and
+verified with it:
 
 1. Push the repository to GitHub.
 2. Sign in to Render and choose **New > Blueprint**.
@@ -313,9 +303,11 @@ deployment can be reproduced on [Render](https://render.com) in four steps:
 4. The first build takes a couple of minutes, then the service gets a public
    `.onrender.com` address.
 
-Two files hold that address and need updating if it ever changes: the `og:url`
-and `og:image` tags in `public/index.html`, and the link at the top of this
-README.
+No address is committed here, because the service is only resumed when it is
+needed and answers `503` the rest of the time. Once there is a permanent one,
+two places want it: an `og:url` tag and an absolute `og:image` in
+`public/index.html`, which link previews need in order to work at all, and a
+line at the top of this README.
 
 Two things to expect on the free plan. A running service still sleeps after
 roughly fifteen minutes without traffic and takes about a minute to wake, so the
