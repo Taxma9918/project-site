@@ -73,16 +73,23 @@ The application runs at <http://localhost:3000> (or on the port given by the
 
 ### Tests
 
-`npm test` runs 22 tests against the real Express application over HTTP,
-covering authentication, role permissions, input validation, the full CRUD
-cycle including moving an entry between categories, concurrent writes, and
-error handling.
+`npm test` runs 40 tests, split between the server and the browser side.
 
-Each test file starts its own copy of the app on an ephemeral port, pointed at
-a temporary copy of `data/` through the `DATA_DIR` environment variable, so the
-suite never touches the real data files. Authentication tests live in their own
-file because the login rate limiter keeps state per address, and `node --test`
-gives every file a separate process.
+The 22 server tests drive the real Express application over HTTP and cover
+authentication, role permissions, input validation, the full CRUD cycle
+including moving an entry between categories, concurrent writes, and error
+handling. Each file starts its own copy of the app on an ephemeral port,
+pointed at a temporary copy of `data/` through the `DATA_DIR` environment
+variable, so the suite never touches the real data files. Authentication has
+its own file because the login rate limiter keeps state per address, and
+`node --test` gives every file a separate process.
+
+The 18 client tests load `public/index.html` and `public/script.js` into jsdom
+with a stubbed `fetch`, so the page code runs exactly as written, without a
+server or a browser. They cover the hash routing and its defaults, the active
+menu marking, the guard on the admin routes, escaping of hostile titles and
+`javascript:` links, the thumbnail paths, the lightbox including focus handling
+and Escape, the search filter, and restoring a saved session.
 
 Running the suite needs Node 21 or newer, because the script lets the test
 runner expand the glob itself.
@@ -137,6 +144,8 @@ test/                  Test suite (node:test)
   helpers.js           Starts the app on a temporary copy of data/
   api.test.js          Resources, permissions, validation, CRUD
   auth.test.js         Login, tokens, rate limiting
+  client-helpers.js    Loads the page into jsdom with a stubbed fetch
+  client.test.js       Routing, escaping, lightbox, filter, session
 ```
 
 ## REST API
