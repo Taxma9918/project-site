@@ -125,20 +125,27 @@ header h1 {
     border-bottom: 1px solid var(--line);
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 30;
 }
 
-.top-menu ul {
+.menu-bar {
     list-style: none;
     margin: 0 auto;
     padding: 0 1rem;
-    max-width: 1200px;
+    max-width: 1100px;
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
 }
 
-.top-menu button {
+.menu-item {
+    position: relative;
+}
+
+.menu-item > button {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
     padding: 1rem 1.05rem;
     background: none;
     border: none;
@@ -147,18 +154,117 @@ header h1 {
     color: var(--ink-soft);
     font-size: 0.95rem;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.top-menu button:hover {
+.menu-item > button:hover {
     color: var(--ink);
     background: none;
 }
 
 /* Το ενεργό στοιχείο μενού. Το aria-current το ορίζει το script. */
-.top-menu button[aria-current] {
+.menu-item > button[aria-current] {
     color: var(--ink);
     border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+
+/* Όσο το πάνελ είναι ανοιχτό, το κουμπί δείχνει ότι το κρατά ανοιχτό. */
+.menu-item > button[aria-expanded="true"] {
+    color: var(--ink);
+    background-color: var(--surface-alt);
+}
+
+/*
+ * Το βελάκι γυρίζει όταν ανοίγουν οι επιλογές. Είναι διακοσμητικό: η
+ * κατάσταση ανακοινώνεται από το aria-expanded, όχι από το σχήμα.
+ */
+.menu-item > button[aria-controls]::after {
+    content: "";
+    width: 0.34rem;
+    height: 0.34rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-0.12em) rotate(45deg);
+    opacity: 0.55;
+    transition: transform 0.18s ease;
+}
+
+.menu-item > button[aria-controls][aria-expanded="true"]::after {
+    transform: translateY(0.06em) rotate(225deg);
+}
+
+/* -------------------------- Πτυσσόμενες επιλογές -------------------------- */
+
+.submenu {
+    position: absolute;
+    top: calc(100% - 1px);
+    left: 0;
+    z-index: 40;
+    min-width: 15rem;
+    padding: 0.9rem;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    animation: submenu-in 0.16s ease-out;
+}
+
+@keyframes submenu-in {
+    from {
+        opacity: 0;
+        transform: translateY(-7px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.submenu-hint {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.submenu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.submenu ul button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--ink-soft);
+    font-size: 0.94rem;
+    font-weight: 400;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.submenu ul button:hover {
+    background-color: var(--surface-alt);
+    color: var(--ink);
+}
+
+.submenu ul button[aria-current] {
+    background-color: var(--surface-alt);
+    border-left-color: var(--accent);
+    color: var(--ink);
     font-weight: 600;
 }
 
@@ -167,72 +273,10 @@ header h1 {
 .container {
     display: flex;
     flex: 1;
-    align-items: flex-start;
-    gap: 2rem;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 2rem 1rem 3rem;
-}
-
-aside {
-    width: 240px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 4.2rem;
-}
-
-aside h3 {
-    margin: 0 0 0.4rem;
-    font-family: var(--font-body);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-}
-
-aside > div > p {
-    margin: 0 0 0.9rem;
-    font-size: 0.86rem;
-    color: var(--ink-faint);
-}
-
-aside ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-}
-
-/* Τα στοιχεία του υπομενού διαβάζονται ως σύνδεσμοι, όχι ως κουμπιά. */
-aside ul button {
-    width: 100%;
-    text-align: left;
-    padding: 0.5rem 0.8rem;
-    background: none;
-    border: none;
-    border-left: 2px solid transparent;
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    color: var(--ink-soft);
-    font-size: 0.94rem;
-    font-weight: 400;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-aside ul button:hover {
-    background-color: var(--surface);
-    color: var(--ink);
-}
-
-aside ul button[aria-current] {
-    background-color: var(--surface);
-    border-left-color: var(--accent);
-    color: var(--ink);
-    font-weight: 600;
+    padding: 2.4rem 1rem 3rem;
 }
 
 main {
@@ -426,25 +470,17 @@ figcaption {
 
 /* ------------------------------- Φόρμες ------------------------------- */
 
-#admin-menu {
-    padding: 1.1rem;
-    background-color: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
+/* Ο πίνακας διαχείρισης ζει μέσα στη σελίδα, όχι σε πτυσσόμενο μενού. */
+.admin-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 320px;
+    margin-top: 1.4rem;
 }
 
-#admin-menu h3 {
-    margin-top: 0;
-}
-
-#admin-menu h4 {
-    margin: 0 0 0.7rem;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.login-section form,
 .admin-section,
 .resource-form {
     display: flex;
@@ -518,12 +554,6 @@ label {
     color: var(--ink-faint);
 }
 
-#session-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-}
-
 /* ------------------------------- Κουμπιά ------------------------------- */
 
 button {
@@ -586,9 +616,8 @@ button.danger:hover {
 }
 
 /*
- * Τα κουμπιά του πλαϊνού πίνακα διαχείρισης είναι πλοήγηση, όχι κύριες
- * ενέργειες: περιγραμμένα και αριστερά στοιχισμένα, ώστε να μη φωνάζουν
- * όλα μαζί όσο η "Σύνδεση" ή η "Αποθήκευση".
+ * Τα κουμπιά μέσα στο πάνελ διαχείρισης είναι πλοήγηση, όχι κύριες
+ * ενέργειες: περιγραμμένα, ώστε να μη φωνάζουν όσο η "Σύνδεση".
  */
 .admin-section button,
 #logout-button {
@@ -609,7 +638,6 @@ button.danger:hover {
 /* Η αποσύνδεση ξεχωρίζει από τη λίστα και είναι ακόμη πιο διακριτική. */
 #logout-button {
     margin-top: 0.6rem;
-    padding-top: 0.55rem;
     border-color: transparent;
     color: var(--ink-faint);
     font-size: 0.86rem;
@@ -649,6 +677,17 @@ button.danger:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: lightbox-in 0.2s ease-out;
+}
+
+@keyframes lightbox-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .lightbox-inner {
@@ -700,47 +739,40 @@ button.danger:hover {
 /* ------------------------------ Responsive ------------------------------ */
 
 @media (max-width: 860px) {
-    .container {
-        flex-direction: column;
-        gap: 1.5rem;
-        padding: 1.5rem 1rem 2.5rem;
+    header {
+        padding: 2rem 1rem 1.6rem;
     }
 
-    aside {
-        width: 100%;
-        position: static;
-    }
-
-    aside ul {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-    }
-
-    aside ul button {
-        width: auto;
-        border-left: none;
-        border-bottom: 2px solid transparent;
-        border-radius: var(--radius-sm);
-        background-color: var(--surface);
-    }
-
-    aside ul button[aria-current] {
-        border-left: none;
-        border-bottom-color: var(--accent);
-    }
-
-    .top-menu {
-        position: static;
-    }
-
-    .top-menu ul {
+    .menu-bar {
         justify-content: center;
     }
 
+    /*
+     * Σε στενή οθόνη το πάνελ ανοίγει σε όλο το πλάτος της μπάρας αντί να
+     * κρέμεται από το κουμπί, όπου δεν θα χωρούσε.
+     */
+    .menu-item {
+        position: static;
+    }
+
+    .submenu {
+        left: 0.75rem;
+        right: 0.75rem;
+        min-width: 0;
+    }
+
+    .container {
+        padding: 1.6rem 1rem 2.5rem;
+    }
+
+    /*
+     * Ο πίνακας κυλάει οριζόντια αντί να στριμώχνει τις στήλες. Χωρίς το
+     * nowrap το περιεχόμενο αναδιπλωνόταν και δεν ενεργοποιούσε καν την κύλιση.
+     */
     .data-table {
         display: block;
         overflow-x: auto;
+        white-space: nowrap;
     }
 
     .lightbox {
@@ -757,6 +789,7 @@ button.danger:hover {
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;
+        animation: none !important;
     }
 
     .painting-card:hover {
@@ -767,7 +800,7 @@ button.danger:hover {
 /* --------------------------- Utility --------------------------- */
 
 /* Μπαίνει τελευταίο και με !important, γιατί αλλιώς κανόνες όπως
-   #session-section { display: flex } ή .lightbox { display: flex }
+   .admin-panel { display: flex } ή .lightbox { display: flex }
    υπερισχύουν λόγω specificity. */
 .hidden,
 [hidden] {

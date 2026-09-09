@@ -79,6 +79,17 @@ async function loadApp({ session = null } = {}) {
     window.confirm = () => true;
     window.alert = () => {};
 
+    // Το jsdom απαντά πάντα false στα media queries. Προσποιούμαστε συσκευή με
+    // ποντίκι, ώστε να μπορεί να ελεγχθεί και η συμπεριφορά του hover. Το
+    // element.click() παράγει detail 0, δηλαδή ενεργοποίηση χωρίς δείκτη, οπότε
+    // τα υπόλοιπα tests συνεχίζουν να δοκιμάζουν τη διαδρομή πληκτρολογίου.
+    window.matchMedia = query => ({
+        matches: query.includes('hover: hover'),
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+    });
+
     if (session) {
         window.sessionStorage.setItem('delacroix-session', JSON.stringify(session));
     }
@@ -102,6 +113,15 @@ async function loadApp({ session = null } = {}) {
             for (let i = 0; i < rounds; i += 1) {
                 await new Promise(resolve => window.setTimeout(resolve, 0));
             }
+        },
+        /** Περιμένει πραγματικό χρόνο, για τις καθυστερήσεις του hover. */
+        async wait(ms) {
+            await new Promise(resolve => window.setTimeout(resolve, ms));
+            await app.settle();
+        },
+        /** Στέλνει γεγονός ποντικιού, που το element.click() δεν παράγει. */
+        hover(element, type) {
+            element.dispatchEvent(new window.MouseEvent(type, { bubbles: false }));
         },
         close: () => window.close()
     };

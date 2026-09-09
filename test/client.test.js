@@ -26,14 +26,17 @@ test('κάθε ενότητα έχει δική της διεύθυνση', asyn
     app.close();
 });
 
-test('μια ενότητα χωρίς κατηγορία δείχνει την προεπιλεγμένη', async () => {
+test('μια ενότητα χωρίς κατηγορία δείχνει τα πάντα', async () => {
     const app = await loadApp();
 
     await app.go('#/exhibitions');
-    assert.match(app.main().querySelector('h2').textContent, /Τρέχουσες/);
+    assert.match(app.main().querySelector('h2').textContent, /Όλες οι Εκθέσεις/);
 
     await app.go('#/links');
-    assert.match(app.main().querySelector('h2').textContent, /Διαδικτυακοί/);
+    assert.match(app.main().querySelector('h2').textContent, /Όλοι οι Σύνδεσμοι/);
+
+    await app.go('#/bio');
+    assert.equal(app.main().querySelector('h2').textContent, 'Βιογραφία');
 
     app.close();
 });
@@ -57,12 +60,130 @@ test('το ενεργό στοιχείο μενού σημειώνεται με 
     app.close();
 });
 
-test('το υπομενού της ενότητας γίνεται ορατό', async () => {
+test('οι επιλογές μιας ενότητας είναι κρυφές μέχρι να ζητηθούν', async () => {
     const app = await loadApp();
-    await app.go('#/exhibitions/past');
+    const toggle = app.document.querySelector('.menu-item > [data-nav="exhibitions"]');
+    const panel = app.document.getElementById('exhibitions-menu');
 
-    assert.ok(!app.document.getElementById('exhibitions-menu').classList.contains('hidden'));
-    assert.ok(app.document.getElementById('links-menu').classList.contains('hidden'));
+    assert.ok(panel.classList.contains('hidden'), 'αρχικά κρυφές');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+
+    toggle.click();
+    await app.settle();
+
+    assert.ok(!panel.classList.contains('hidden'), 'άνοιξαν');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+    app.close();
+});
+
+test('δεύτερο κλικ στην ενότητα κλείνει τις επιλογές', async () => {
+    const app = await loadApp();
+    const toggle = app.document.querySelector('.menu-item > [data-nav="links"]');
+    const panel = app.document.getElementById('links-menu');
+
+    toggle.click();
+    await app.settle();
+    assert.ok(!panel.classList.contains('hidden'));
+
+    toggle.click();
+    await app.settle();
+    assert.ok(panel.classList.contains('hidden'), 'έκλεισαν');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+    app.close();
+});
+
+test('ανοίγει μόνο ένα πάνελ κάθε φορά', async () => {
+    const app = await loadApp();
+
+    app.document.querySelector('.menu-item > [data-nav="paintings"]').click();
+    await app.settle();
+    app.document.querySelector('.menu-item > [data-nav="links"]').click();
+    await app.settle();
+
+    assert.ok(app.document.getElementById('paintings-menu').classList.contains('hidden'),
+        'το προηγούμενο έκλεισε');
+    assert.ok(!app.document.getElementById('links-menu').classList.contains('hidden'));
+    const expanded = [...app.document.querySelectorAll('[aria-expanded="true"]')];
+    assert.equal(expanded.length, 1, 'ένα μόνο κουμπί δηλώνει ανοιχτό');
+    app.close();
+});
+
+test('η επιλογή κατηγορίας πλοηγεί και κλείνει τις επιλογές', async () => {
+    const app = await loadApp();
+
+    app.document.querySelector('.menu-item > [data-nav="paintings"]').click();
+    await app.settle();
+    app.document.querySelector('[data-nav="paintings/portraits"]').click();
+    await app.settle();
+
+    assert.equal(app.window.location.hash, '#/paintings/portraits');
+    assert.match(app.main().querySelector('h2').textContent, /Πορτρέτα/);
+    assert.ok(app.document.getElementById('paintings-menu').classList.contains('hidden'),
+        'το πάνελ έκλεισε μετά την επιλογή');
+    app.close();
+});
+
+test('το Escape κλείνει τις επιλογές και επιστρέφει το focus', async () => {
+    const app = await loadApp();
+    const toggle = app.document.querySelector('.menu-item > [data-nav="bio"]');
+
+    toggle.click();
+    await app.settle();
+    assert.ok(!app.document.getElementById('bio-menu').classList.contains('hidden'));
+
+    app.document.dispatchEvent(new app.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await app.settle();
+
+    assert.ok(app.document.getElementById('bio-menu').classList.contains('hidden'));
+    assert.equal(app.document.activeElement, toggle, 'το focus γύρισε στο κουμπί');
+    app.close();
+});
+
+test('κλικ μέσα στο πάνελ δεν το κλείνει, κλικ έξω το κλείνει', async () => {
+    const app = await loadApp();
+
+    app.document.querySelector('.menu-item > [data-nav="paintings"]').click();
+    await app.settle();
+    const panel = app.document.getElementById('paintings-menu');
+    assert.ok(!panel.classList.contains('hidden'));
+
+    // Στοιχείο μέσα στο πάνελ που δεν είναι επιλογή πλοήγησης.
+    panel.querySelector('.submenu-hint').click();
+    await app.settle();
+    assert.ok(!panel.classList.contains('hidden'), 'το κλικ μέσα το αφήνει ανοιχτό');
+
+    app.main().click();
+    await app.settle();
+    assert.ok(panel.classList.contains('hidden'), 'το κλικ έξω το κλείνει');
+    app.close();
+});
+
+test('η διαχείριση δεν έχει πτυσσόμενο, πλοηγεί κατευθείαν', async () => {
+    const app = await loadApp();
+    const toggle = app.document.querySelector('.menu-item > [data-nav="admin"]');
+
+    assert.equal(toggle.getAttribute('aria-controls'), null, 'δεν ελέγχει πάνελ');
+    assert.equal(app.document.getElementById('admin-menu'), null, 'δεν υπάρχει πάνελ');
+
+    toggle.click();
+    await app.settle();
+
+    assert.equal(app.window.location.hash, '#/admin');
+    assert.equal(app.document.querySelectorAll('.submenu:not(.hidden)').length, 0,
+        'κανένα πάνελ ανοιχτό');
+    app.close();
+});
+
+test('ανοιχτό πάνελ κλείνει όταν πάμε στη διαχείριση', async () => {
+    const app = await loadApp();
+
+    app.document.querySelector('.menu-item > [data-nav="links"]').click();
+    await app.settle();
+    assert.ok(!app.document.getElementById('links-menu').classList.contains('hidden'));
+
+    app.document.querySelector('.menu-item > [data-nav="admin"]').click();
+    await app.settle();
+    assert.ok(app.document.getElementById('links-menu').classList.contains('hidden'), 'έκλεισε');
     app.close();
 });
 
@@ -225,19 +346,55 @@ test('το φίλτρο δουλεύει και στους πίνακες δεδ
 
 test('αποθηκευμένη συνεδρία επαληθεύεται στον server και επαναφέρεται', async () => {
     const app = await loadApp({ session: { token: 't', role: 'admin', username: 'admin' } });
-
     assert.ok(app.calls.some(call => call.url === '/api/me'), 'το token ελέγχθηκε');
-    assert.equal(app.document.getElementById('session-name').textContent, 'admin');
-    assert.ok(app.document.getElementById('login-section').classList.contains('hidden'));
-    assert.ok(!app.document.getElementById('admin-actions').classList.contains('hidden'));
+
+    await app.go('#/admin');
+    assert.match(app.main().textContent, /Συνδεδεμένος ως/);
+    assert.ok(app.document.getElementById('admin-actions'), 'υπάρχουν οι ενέργειες διαχείρισης');
+    assert.equal(app.document.getElementById('login-form'), null, 'όχι φόρμα σύνδεσης');
     app.close();
 });
 
-test('χωρίς συνεδρία εμφανίζεται η φόρμα σύνδεσης', async () => {
+test('χωρίς συνεδρία η οθόνη διαχείρισης δείχνει τη φόρμα σύνδεσης', async () => {
     const app = await loadApp();
+    await app.go('#/admin');
 
-    assert.ok(!app.document.getElementById('login-section').classList.contains('hidden'));
-    assert.ok(app.document.getElementById('session-section').classList.contains('hidden'));
+    assert.ok(app.document.getElementById('login-form'), 'υπάρχει η φόρμα');
+    assert.ok(app.document.getElementById('username'));
+    assert.equal(app.document.getElementById('admin-actions'), null, 'καμία ενέργεια διαχείρισης');
+    app.close();
+});
+
+test('ο επισκέπτης χωρίς δικαιώματα δεν βλέπει ενέργειες διαχείρισης', async () => {
+    const app = await loadApp({ session: { token: 't', role: 'user', username: 'user' } });
+    await app.go('#/admin');
+
+    assert.match(app.main().textContent, /Συνδεδεμένος ως/);
+    assert.equal(app.document.getElementById('admin-actions'), null);
+    assert.match(app.main().querySelector('.form-note').textContent, /μόνο για προβολή/);
+    app.close();
+});
+
+test('σύνδεση και αποσύνδεση μέσα από τη σελίδα', async () => {
+    const app = await loadApp();
+    await app.go('#/admin');
+
+    app.document.getElementById('username').value = 'admin';
+    app.document.getElementById('password').value = '1234';
+    app.document.getElementById('login-form').dispatchEvent(
+        new app.window.Event('submit', { bubbles: true, cancelable: true }));
+    await app.settle();
+
+    assert.ok(app.document.getElementById('admin-actions'), 'εμφανίστηκαν οι ενέργειες');
+    assert.equal(app.document.getElementById('login-form'), null, 'η φόρμα έφυγε');
+
+    // Τα στοιχεία ξαναδημιουργούνται σε κάθε απόδοση, οπότε ελέγχουμε ότι οι
+    // χειριστές ξανασυνδέονται και μετά την αποσύνδεση.
+    app.document.getElementById('logout-button').click();
+    await app.settle();
+
+    assert.ok(app.document.getElementById('login-form'), 'η φόρμα ξαναεμφανίστηκε');
+    assert.equal(app.document.getElementById('admin-actions'), null);
     app.close();
 });
 
@@ -311,5 +468,212 @@ test('η φόρμα εκθέσεων δεν ζητά κατηγορία, την 
 
     const required = [...app.main().querySelectorAll('#resource-form input')].filter(i => i.required).map(i => i.name);
     assert.deepEqual(required, ['name', 'location', 'startDate'], 'η λήξη είναι προαιρετική');
+    app.close();
+});
+
+test('η προεπιλεγμένη κατηγορία σημειώνεται στο μενού', async () => {
+    const app = await loadApp();
+    await app.go('#/paintings');
+
+    const marked = [...app.document.querySelectorAll('[data-nav][aria-current]')].map(b => b.dataset.nav);
+    assert.ok(marked.includes('paintings'), 'η ενότητα');
+    assert.ok(marked.includes('paintings/all'),
+        'και η προεπιλεγμένη κατηγορία, που είναι αυτή που δείχνει η οθόνη');
+    app.close();
+});
+
+/* ---------------------------- Άνοιγμα με hover ---------------------------- */
+
+test('ο κέρσορας πάνω από μια ενότητα εμφανίζει τις επιλογές χωρίς κλικ', async () => {
+    const app = await loadApp();
+    const item = app.document.querySelector('.menu-item:has([data-nav="paintings"])')
+        || app.document.querySelector('[data-nav="paintings"]').closest('.menu-item');
+    const panel = app.document.getElementById('paintings-menu');
+
+    assert.ok(panel.classList.contains('hidden'), 'αρχικά κρυφές');
+
+    app.hover(item, 'mouseenter');
+    await app.wait(250);
+
+    assert.ok(!panel.classList.contains('hidden'), 'άνοιξαν με το hover');
+    assert.equal(app.document.querySelector('[data-nav="paintings"]').getAttribute('aria-expanded'), 'true');
+    app.close();
+});
+
+test('το hover δεν αλλάζει σελίδα', async () => {
+    const app = await loadApp();
+    await app.go('#/bio/birth');
+    const before = app.main().querySelector('h2').textContent;
+
+    app.hover(app.document.querySelector('[data-nav="links"]').closest('.menu-item'), 'mouseenter');
+    await app.wait(250);
+
+    assert.equal(app.window.location.hash, '#/bio/birth', 'η διεύθυνση δεν άλλαξε');
+    assert.equal(app.main().querySelector('h2').textContent, before, 'ούτε το περιεχόμενο');
+    assert.ok(!app.document.getElementById('links-menu').classList.contains('hidden'),
+        'αλλά οι επιλογές φαίνονται');
+    app.close();
+});
+
+test('η απομάκρυνση του κέρσορα κλείνει τις επιλογές', async () => {
+    const app = await loadApp();
+    const item = app.document.querySelector('[data-nav="exhibitions"]').closest('.menu-item');
+    const panel = app.document.getElementById('exhibitions-menu');
+
+    app.hover(item, 'mouseenter');
+    await app.wait(250);
+    assert.ok(!panel.classList.contains('hidden'));
+
+    app.hover(item, 'mouseleave');
+    await app.wait(350);
+    assert.ok(panel.classList.contains('hidden'), 'έκλεισαν');
+    app.close();
+});
+
+test('το γρήγορο πέρασμα του κέρσορα δεν ανοίγει τίποτα', async () => {
+    const app = await loadApp();
+    const item = app.document.querySelector('[data-nav="paintings"]').closest('.menu-item');
+
+    // Μπαίνει και βγαίνει πριν προλάβει η καθυστέρηση ανοίγματος.
+    app.hover(item, 'mouseenter');
+    await app.wait(40);
+    app.hover(item, 'mouseleave');
+    await app.wait(350);
+
+    assert.ok(app.document.getElementById('paintings-menu').classList.contains('hidden'),
+        'δεν άνοιξε καθόλου');
+    app.close();
+});
+
+test('ο κέρσορας πάνω από τη διαχείριση κλείνει ανοιχτές επιλογές', async () => {
+    const app = await loadApp();
+
+    app.hover(app.document.querySelector('[data-nav="links"]').closest('.menu-item'), 'mouseenter');
+    await app.wait(250);
+    assert.ok(!app.document.getElementById('links-menu').classList.contains('hidden'));
+
+    app.hover(app.document.querySelector('[data-nav="admin"]').closest('.menu-item'), 'mouseenter');
+    await app.wait(350);
+
+    assert.ok(app.document.getElementById('links-menu').classList.contains('hidden'),
+        'η διαχείριση δεν έχει επιλογές, οπότε καθαρίζει τη μπάρα');
+    app.close();
+});
+
+test('το κλικ στην ενότητα δεν πλοηγεί, μόνο δείχνει τις επιλογές', async () => {
+    const app = await loadApp();
+    await app.go('#/bio/birth');
+
+    const button = app.document.querySelector('.menu-item > [data-nav="paintings"]');
+    const panel = app.document.getElementById('paintings-menu');
+
+    app.hover(button.closest('.menu-item'), 'mouseenter');
+    await app.wait(250);
+    assert.ok(!panel.classList.contains('hidden'));
+
+    // Το element.click() δίνει detail 0, δηλαδή ενεργοποίηση χωρίς δείκτη.
+    // Ένα πραγματικό κλικ ποντικιού έχει detail 1.
+    button.dispatchEvent(new app.window.MouseEvent('click', { bubbles: true, detail: 1 }));
+    await app.settle();
+
+    assert.equal(app.window.location.hash, '#/bio/birth', 'η σελίδα δεν άλλαξε');
+    assert.ok(!panel.classList.contains('hidden'), 'οι επιλογές μένουν ανοιχτές');
+    app.close();
+});
+
+test('η ενεργοποίηση από πληκτρολόγιο ανοίγει και κλείνει', async () => {
+    const app = await loadApp();
+    const button = app.document.querySelector('.menu-item > [data-nav="bio"]');
+    const panel = app.document.getElementById('bio-menu');
+
+    // Το click() χωρίς δείκτη είναι ό,τι παράγει το Enter σε κουμπί.
+    button.click();
+    await app.settle();
+    assert.ok(!panel.classList.contains('hidden'), 'άνοιξε');
+
+    button.click();
+    await app.settle();
+    assert.ok(panel.classList.contains('hidden'), 'ξανάκλεισε');
+    app.close();
+});
+
+/* ------------------------------ Επιλογή "Όλα" ------------------------------ */
+
+test('κάθε ενότητα με επιλογές έχει πρώτο το "Όλα"', async () => {
+    const app = await loadApp();
+
+    for (const section of ['bio', 'paintings', 'exhibitions', 'links']) {
+        const first = app.document.querySelector(`#${section}-menu ul button`);
+        assert.equal(first.textContent.trim(), 'Όλα', `η ενότητα ${section}`);
+        assert.equal(first.dataset.nav, `${section}/all`);
+    }
+
+    // Η διαχείριση δεν έχει επιλογές, οπότε ούτε "Όλα".
+    assert.equal(app.document.getElementById('admin-menu'), null);
+    app.close();
+});
+
+test('το "Όλα" της βιογραφίας δείχνει όλες τις ενότητες με τους τίτλους τους', async () => {
+    const app = await loadApp();
+    await app.go('#/bio/all');
+
+    assert.equal(app.main().querySelector('h2').textContent, 'Βιογραφία');
+    const headings = [...app.main().querySelectorAll('h3')].map(h => h.textContent);
+    assert.deepEqual(headings, ['Γέννηση', 'Έργα']);
+    assert.equal(app.main().querySelectorAll('p').length, 3, 'και οι τρεις παράγραφοι');
+    app.close();
+});
+
+test('το "Όλα" των εκθέσεων δείχνει τρέχουσες και παρελθούσες', async () => {
+    const app = await loadApp();
+    await app.go('#/exhibitions/all');
+
+    const headings = [...app.main().querySelectorAll('h3')].map(h => h.textContent);
+    assert.deepEqual(headings, ['Τρέχουσες Εκθέσεις', 'Παρελθούσες Εκθέσεις']);
+    assert.equal(app.main().querySelectorAll('.data-table').length, 2);
+    assert.equal(app.main().querySelectorAll('.data-table tbody tr').length, 2);
+    app.close();
+});
+
+test('το "Όλα" των συνδέσμων κρατά τις σωστές στήλες σε κάθε πίνακα', async () => {
+    const app = await loadApp();
+    await app.go('#/links/all');
+
+    const tables = [...app.main().querySelectorAll('.data-table')];
+    assert.equal(tables.length, 2);
+
+    const columns = tables.map(table =>
+        [...table.querySelectorAll('th')].map(th => th.textContent.trim()));
+    assert.deepEqual(columns[0], ['Όνομα', 'URL'], 'οι διαδικτυακοί σύνδεσμοι');
+    assert.deepEqual(columns[1], ['Τίτλος', 'Συγγραφέας'], 'η βιβλιογραφία');
+    app.close();
+});
+
+test('το φίλτρο δουλεύει και στη συγκεντρωτική προβολή', async () => {
+    const app = await loadApp();
+    await app.go('#/links/all');
+
+    const visible = () => [...app.main().querySelectorAll('.data-table tbody tr')]
+        .filter(row => !row.hidden).length;
+    const input = app.document.getElementById('filter-input');
+
+    assert.equal(visible(), 3, 'και οι τρεις καταχωρήσεις');
+    input.value = 'βιβλίο';
+    input.dispatchEvent(new app.window.Event('input'));
+    assert.equal(visible(), 1, 'φιλτράρει διασχίζοντας και τους δύο πίνακες');
+    app.close();
+});
+
+test('η επιλογή "Όλα" πλοηγεί και κλείνει τις επιλογές', async () => {
+    const app = await loadApp();
+
+    app.document.querySelector('.menu-item > [data-nav="exhibitions"]').click();
+    await app.settle();
+    app.document.querySelector('[data-nav="exhibitions/all"]').click();
+    await app.settle();
+
+    assert.equal(app.window.location.hash, '#/exhibitions/all');
+    assert.match(app.main().querySelector('h2').textContent, /Όλες οι Εκθέσεις/);
+    assert.ok(app.document.getElementById('exhibitions-menu').classList.contains('hidden'));
     app.close();
 });

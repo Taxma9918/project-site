@@ -33,6 +33,14 @@ edited and deleted:
   section has its own address — `#/paintings/portraits`,
   `#/links/bibliography`, `#/bio/birth`. Sections can be bookmarked or shared,
   and the browser back and forward buttons work as expected.
+- **Menu.** The options of a section stay out of the way until they are wanted:
+  resting the cursor on a section reveals them, and they fade in beneath it.
+  Hovering only reveals, never navigates, so the page never changes because a
+  cursor passed over the bar. Every section offers **Όλα** first, which shows
+  its categories together on one screen. Hover is only wired up on devices that
+  report a fine pointer; with a keyboard or a touch screen the button opens and
+  closes the panel instead, and Escape closes it and returns focus to the
+  button that opened it.
 - **Lightbox.** Clicking a painting opens it at full size with its caption.
   It closes with Escape, with the close button, or by clicking the backdrop,
   and focus returns to the thumbnail that opened it.
@@ -198,6 +206,11 @@ Each JSON file is an object keyed by category, and every entry carries a unique
   "past": []
 }
 ```
+
+The interface also accepts `all` as a category — `#/links/all`, `#/bio/all` —
+which renders every category of that section one after another, each with its
+own heading and, where the columns differ, its own table. It is a view rather
+than a stored category, so the API never sees it.
 
 `POST` and `PUT` bodies for paintings and links also include a `category` field.
 If a `PUT` is given a different category, the entry is moved into it.

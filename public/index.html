@@ -28,82 +28,78 @@
         <p class="subtitle">Ευγένιος Ντελακρουά (1798–1863)</p>
     </header>
 
+    <!--
+      Κάθε ενότητα κρύβει τις επιλογές της σε πτυσσόμενο πάνελ. Το κουμπί της
+      ενότητας τις εμφανίζει, και δηλώνει την κατάστασή του με aria-expanded
+      ώστε να τη διαβάζουν και οι αναγνώστες οθόνης.
+    -->
     <nav class="top-menu" aria-label="Κύριο μενού">
-        <ul>
-            <li><button type="button" data-nav="bio">Βιογραφία</button></li>
-            <li><button type="button" data-nav="paintings">Πίνακες</button></li>
-            <li><button type="button" data-nav="exhibitions">Εκθέσεις</button></li>
-            <li><button type="button" data-nav="links">Σύνδεσμοι</button></li>
-            <li><button type="button" data-nav="admin">Διαχείριση</button></li>
+        <ul class="menu-bar">
+            <li class="menu-item">
+                <button type="button" data-nav="bio" aria-expanded="false" aria-controls="bio-menu">
+                    Βιογραφία
+                </button>
+                <div id="bio-menu" class="submenu hidden">
+                    <p class="submenu-hint">Επιλέξτε κατηγορία</p>
+                    <ul>
+                        <li><button type="button" data-nav="bio/all">Όλα</button></li>
+                        <li><button type="button" data-nav="bio/birth">Γέννηση</button></li>
+                        <li><button type="button" data-nav="bio/career">Έργα</button></li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="menu-item">
+                <button type="button" data-nav="paintings" aria-expanded="false" aria-controls="paintings-menu">
+                    Πίνακες
+                </button>
+                <div id="paintings-menu" class="submenu hidden">
+                    <p class="submenu-hint">Κατηγορίες πινάκων</p>
+                    <ul>
+                        <li><button type="button" data-nav="paintings/all">Όλα</button></li>
+                        <li><button type="button" data-nav="paintings/landscapes">Τοπία</button></li>
+                        <li><button type="button" data-nav="paintings/portraits">Πορτρέτα</button></li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="menu-item">
+                <button type="button" data-nav="exhibitions" aria-expanded="false" aria-controls="exhibitions-menu">
+                    Εκθέσεις
+                </button>
+                <div id="exhibitions-menu" class="submenu hidden">
+                    <p class="submenu-hint">Επιλέξτε κατηγορία</p>
+                    <ul>
+                        <li><button type="button" data-nav="exhibitions/all">Όλα</button></li>
+                        <li><button type="button" data-nav="exhibitions/current">Τρέχουσες Εκθέσεις</button></li>
+                        <li><button type="button" data-nav="exhibitions/past">Παρελθούσες Εκθέσεις</button></li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="menu-item">
+                <button type="button" data-nav="links" aria-expanded="false" aria-controls="links-menu">
+                    Σύνδεσμοι
+                </button>
+                <div id="links-menu" class="submenu hidden">
+                    <p class="submenu-hint">Επιλέξτε κατηγορία</p>
+                    <ul>
+                        <li><button type="button" data-nav="links/all">Όλα</button></li>
+                        <li><button type="button" data-nav="links/web_links">Διαδικτυακοί Σύνδεσμοι</button></li>
+                        <li><button type="button" data-nav="links/bibliography">Βιβλιογραφία</button></li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- Η διαχείριση δεν έχει πτυσσόμενο: η σύνδεση και οι ενέργειές της
+                 ζωγραφίζονται μέσα στη σελίδα, όπου υπάρχει χώρος. -->
+            <li class="menu-item">
+                <button type="button" data-nav="admin">Διαχείριση</button>
+            </li>
         </ul>
     </nav>
 
     <div class="container">
-        <aside aria-label="Υπομενού">
-            <div id="bio-menu" class="submenu hidden">
-                <h3>Βιογραφία</h3>
-                <p>Επιλέξτε κατηγορία...</p>
-                <ul>
-                    <li><button type="button" data-nav="bio/birth">Γέννηση</button></li>
-                    <li><button type="button" data-nav="bio/career">Έργα</button></li>
-                </ul>
-            </div>
-
-            <div id="paintings-menu" class="submenu hidden">
-                <h3>Κατηγορίες Πινάκων</h3>
-                <ul>
-                    <li><button type="button" data-nav="paintings/all">Όλοι οι Πίνακες</button></li>
-                    <li><button type="button" data-nav="paintings/landscapes">Τοπία</button></li>
-                    <li><button type="button" data-nav="paintings/portraits">Πορτρέτα</button></li>
-                </ul>
-            </div>
-
-            <div id="exhibitions-menu" class="submenu hidden">
-                <h3>Εκθέσεις</h3>
-                <p>Επιλέξτε κατηγορία...</p>
-                <ul>
-                    <li><button type="button" data-nav="exhibitions/current">Τρέχουσες Εκθέσεις</button></li>
-                    <li><button type="button" data-nav="exhibitions/past">Παρελθούσες Εκθέσεις</button></li>
-                </ul>
-            </div>
-
-            <div id="links-menu" class="submenu hidden">
-                <h3>Σύνδεσμοι</h3>
-                <p>Επιλέξτε κατηγορία...</p>
-                <ul>
-                    <li><button type="button" data-nav="links/web_links">Διαδικτυακοί Σύνδεσμοι</button></li>
-                    <li><button type="button" data-nav="links/bibliography">Βιβλιογραφία</button></li>
-                </ul>
-            </div>
-
-            <div id="admin-menu" class="submenu hidden">
-                <h3>Διαχείριση</h3>
-
-                <div id="login-section" class="login-section">
-                    <h4>Σύνδεση Χρήστη</h4>
-                    <form id="login-form">
-                        <label for="username">Όνομα Χρήστη:</label>
-                        <input type="text" id="username" name="username" autocomplete="username" required>
-                        <label for="password">Κωδικός:</label>
-                        <input type="password" id="password" name="password" autocomplete="current-password" required>
-                        <button type="submit">Σύνδεση</button>
-                    </form>
-                    <p id="login-error" class="error" role="alert" hidden></p>
-                </div>
-
-                <div id="session-section" class="hidden">
-                    <h4>Καλωσήρθατε, <span id="session-name"></span>!</h4>
-                    <div id="admin-actions" class="hidden admin-section">
-                        <button type="button" data-nav="admin/biography">Διαχείριση Βιογραφίας</button>
-                        <button type="button" data-nav="admin/paintings">Διαχείριση Πινάκων</button>
-                        <button type="button" data-nav="admin/exhibitions">Διαχείριση Εκθέσεων</button>
-                        <button type="button" data-nav="admin/links">Διαχείριση Συνδέσμων</button>
-                    </div>
-                    <button type="button" id="logout-button">Αποσύνδεση</button>
-                </div>
-            </div>
-        </aside>
-
         <main id="main-content" tabindex="-1" aria-live="polite">
             <p>Καλωσορίσατε! Επιλέξτε μια επιλογή από το μενού.</p>
         </main>

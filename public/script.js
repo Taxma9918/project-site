@@ -66,10 +66,13 @@ function showLoading(label = 'Φόρτωση…') {
 
 const MENUS = ['bio', 'paintings', 'exhibitions', 'links', 'admin'];
 
+// Κάθε ενότητα ανοίγει στην επιλογή "Όλα": το κουμπί της ενότητας δεν πλοηγεί
+// πια, οπότε η προεπιλογή αφορά μόνο τις απευθείας διευθύνσεις (π.χ. #/links).
 const DEFAULT_CATEGORY = {
+    bio: 'all',
     paintings: 'all',
-    exhibitions: 'current',
-    links: 'web_links'
+    exhibitions: 'all',
+    links: 'all'
 };
 
 function navigate(path) {
@@ -79,9 +82,49 @@ function navigate(path) {
     else location.hash = target;
 }
 
-function showSubmenu(menu) {
-    document.querySelectorAll('.submenu').forEach(submenu => submenu.classList.add('hidden'));
-    if (menu) document.getElementById(`${menu}-menu`)?.classList.remove('hidden');
+/*
+ * Οι επιλογές κάθε ενότητας ζουν σε πτυσσόμενο πάνελ κάτω από το κουμπί της.
+ * Ανοίγει ένα κάθε φορά· η κατάσταση δηλώνεται με aria-expanded, ώστε να τη
+ * διαβάζουν και οι αναγνώστες οθόνης.
+ */
+let openMenu = null;
+
+/*
+ * Με ποντίκι οι επιλογές ανοίγουν μόλις περάσει από πάνω ο κέρσορας. Σε οθόνη
+ * αφής δεν υπάρχει hover, και στο πληκτρολόγιο δεν υπάρχει κέρσορας: εκεί
+ * μένει το κλικ, γι' αυτό το hover προστίθεται μόνο όταν η συσκευή το έχει.
+ */
+const hoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+let hoverTimer = null;
+
+function menuToggle(menu) {
+    return document.querySelector(`.menu-item > [data-nav="${menu}"]`);
+}
+
+function closeSubmenu({ restoreFocus = false } = {}) {
+    clearTimeout(hoverTimer);
+    if (!openMenu) return;
+    document.getElementById(`${openMenu}-menu`)?.classList.add('hidden');
+
+    const toggle = menuToggle(openMenu);
+    toggle?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) toggle?.focus();
+
+    openMenu = null;
+}
+
+function openSubmenu(menu) {
+    clearTimeout(hoverTimer);
+    if (openMenu === menu) return;
+    closeSubmenu();
+
+    const panel = document.getElementById(`${menu}-menu`);
+    if (!panel) return;
+
+    panel.classList.remove('hidden');
+    menuToggle(menu)?.setAttribute('aria-expanded', 'true');
+    openMenu = menu;
 }
 
 /** Σημειώνει το ενεργό στοιχείο μενού, για τον χρήστη και για τους screen readers. */
@@ -98,18 +141,19 @@ async function route() {
     const [menu, category] = path.split('/');
 
     if (!MENUS.includes(menu)) {
-        showSubmenu(null);
         markActive(null, '');
         mainContent.innerHTML = '<p>Καλωσορίσατε! Επιλέξτε μια επιλογή από το μενού.</p>';
         return;
     }
 
-    showSubmenu(menu);
-    markActive(menu, path);
+    // Όταν δεν δίνεται κατηγορία, ενεργή είναι η προεπιλεγμένη: το μενού πρέπει
+    // να τη σημειώνει, γιατί αυτήν ακριβώς δείχνει η οθόνη.
+    const active = !category && DEFAULT_CATEGORY[menu] ? `${menu}/${DEFAULT_CATEGORY[menu]}` : path;
+    markActive(menu, active);
 
     try {
         if (menu === 'admin') await showAdmin(category);
-        else if (menu === 'bio') await showBiographySection(category);
+        else if (menu === 'bio') await showBiographySection(category || DEFAULT_CATEGORY.bio);
         else if (menu === 'paintings') await showPaintings(category || DEFAULT_CATEGORY.paintings);
         else await showResource(menu, category || DEFAULT_CATEGORY[menu]);
     } finally {
@@ -130,20 +174,23 @@ async function loadBiography() {
 }
 
 async function showBiographySection(section) {
-    if (!section) {
-        mainContent.innerHTML = '<h2>Βιογραφία</h2><p>Επιλέξτε κατηγορία βιογραφίας από το πλαϊνό μενού.</p>';
-        return;
-    }
     if (!biography) showLoading();
     try {
-        const entry = (await loadBiography())[section];
-        if (!entry) {
+        const data = await loadBiography();
+        const showAll = section === 'all';
+        const keys = showAll ? Object.keys(data) : [section];
+
+        if (!keys.every(key => data[key])) {
             showError('Η ενότητα βιογραφίας δεν βρέθηκε.');
             return;
         }
+
         mainContent.innerHTML = `
-            <h2>${esc(entry.title)}</h2>
-            ${entry.paragraphs.map(text => `<p>${esc(text)}</p>`).join('')}
+            <h2>${esc(showAll ? 'Βιογραφία' : data[section].title)}</h2>
+            ${keys.map(key => `
+                ${showAll ? `<h3>${esc(data[key].title)}</h3>` : ''}
+                ${data[key].paragraphs.map(text => `<p>${esc(text)}</p>`).join('')}
+            `).join('')}
         `;
     } catch (error) {
         console.error('Error loading biography:', error);
@@ -342,6 +389,7 @@ const RESOURCES = {
     },
     exhibitions: {
         title: 'Εκθέσεις',
+        allTitle: 'Όλες οι Εκθέσεις',
         categories: { current: 'Τρέχουσες Εκθέσεις', past: 'Παρελθούσες Εκθέσεις' },
         // Η κατηγορία προκύπτει στον server από τις ημερομηνίες, οπότε η φόρμα
         // δεν εμφανίζει επιλογέα: δεν έχει νόημα να τη διαλέγει ο χρήστης.
@@ -361,6 +409,7 @@ const RESOURCES = {
     },
     links: {
         title: 'Σύνδεσμοι',
+        allTitle: 'Όλοι οι Σύνδεσμοι',
         categories: { web_links: 'Διαδικτυακοί Σύνδεσμοι', bibliography: 'Βιβλιογραφία' },
         columns: category => category === 'web_links'
             ? [{ key: 'name', label: 'Όνομα' }, { key: 'url', label: 'URL', type: 'link' }]
@@ -413,18 +462,28 @@ function renderTable(columns, items, extraColumn = null) {
 
 async function showResource(resource, category) {
     const config = RESOURCES[resource];
-    if (!config?.categories[category]) {
+    const showAll = category === 'all';
+
+    if (!showAll && !config?.categories[category]) {
         showError('Η κατηγορία δεν βρέθηκε.');
         return;
     }
     showLoading();
     try {
         const data = await api(`/api/${resource}`);
-        const items = data[category] || [];
+        // Στο "Όλα" κάθε κατηγορία παίρνει δικό της πίνακα, γιατί οι στήλες
+        // τους δεν είναι πάντα ίδιες: οι σύνδεσμοι έχουν URL, η βιβλιογραφία
+        // συγγραφέα.
+        const keys = showAll ? Object.keys(config.categories) : [category];
+        const total = keys.reduce((sum, key) => sum + (data[key] || []).length, 0);
+
         mainContent.innerHTML = `
-            <h2>${esc(config.categories[category])}</h2>
-            ${items.length ? renderFilter('Αναζήτηση στις καταχωρήσεις…') : ''}
-            ${renderTable(config.columns(category), items)}
+            <h2>${esc(showAll ? config.allTitle : config.categories[category])}</h2>
+            ${total ? renderFilter('Αναζήτηση στις καταχωρήσεις…') : ''}
+            ${keys.map(key => `
+                ${showAll ? `<h3>${esc(config.categories[key])}</h3>` : ''}
+                ${renderTable(config.columns(key), data[key] || [])}
+            `).join('')}
             <p id="filter-empty" class="filter-empty" hidden>Δεν βρέθηκαν καταχωρήσεις με αυτόν τον όρο.</p>
         `;
         wireFilter('.data-table tbody tr');
@@ -459,9 +518,51 @@ async function showAdmin(resource) {
 
     editing = null;
     formCategory = null;
-    mainContent.innerHTML = session
-        ? `<h2>Διαχείριση</h2><p>Συνδεδεμένος ως <strong>${esc(session.username)}</strong>.</p>`
-        : '<h2>Διαχείριση</h2><p>Εισάγετε στοιχεία διαχειριστή ή επισκέπτη.</p>';
+
+    mainContent.innerHTML = session ? renderSessionPanel() : renderLoginForm();
+
+    // Τα στοιχεία ξαναδημιουργούνται σε κάθε απόδοση, οπότε συνδέονται εδώ.
+    document.getElementById('login-form')?.addEventListener('submit', login);
+    document.getElementById('logout-button')?.addEventListener('click', () => logout());
+}
+
+function renderLoginForm() {
+    return `
+        <h2>Διαχείριση</h2>
+        <p>Συνδεθείτε για να διαχειριστείτε το περιεχόμενο του ιστότοπου.</p>
+
+        <form id="login-form" class="resource-form">
+            <h3>Σύνδεση Χρήστη</h3>
+            <label for="username">Όνομα Χρήστη</label>
+            <input type="text" id="username" name="username" autocomplete="username" required>
+            <label for="password">Κωδικός</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
+            <div class="form-actions">
+                <button type="submit">Σύνδεση</button>
+            </div>
+            <p id="login-error" class="error" role="alert" hidden></p>
+        </form>
+    `;
+}
+
+function renderSessionPanel() {
+    const isAdmin = session.role === 'admin';
+    return `
+        <h2>Διαχείριση</h2>
+        <p>Συνδεδεμένος ως <strong>${esc(session.username)}</strong>.</p>
+
+        <div class="admin-panel">
+            ${isAdmin ? `
+                <div id="admin-actions" class="admin-section">
+                    <button type="button" data-nav="admin/biography">Διαχείριση Βιογραφίας</button>
+                    <button type="button" data-nav="admin/paintings">Διαχείριση Πινάκων</button>
+                    <button type="button" data-nav="admin/exhibitions">Διαχείριση Εκθέσεων</button>
+                    <button type="button" data-nav="admin/links">Διαχείριση Συνδέσμων</button>
+                </div>
+            ` : '<p class="form-note">Ο λογαριασμός σας έχει δικαιώματα μόνο για προβολή.</p>'}
+            <button type="button" id="logout-button">Αποσύνδεση</button>
+        </div>
+    `;
 }
 
 // Ποια ενότητα βιογραφίας είναι ανοιχτή στη φόρμα.
@@ -674,14 +775,6 @@ function wireManageForm(resource, data) {
 
 /* ------------------------------- Σύνδεση ------------------------------- */
 
-function applySession() {
-    const loggedIn = Boolean(session);
-    document.getElementById('login-section').classList.toggle('hidden', loggedIn);
-    document.getElementById('session-section').classList.toggle('hidden', !loggedIn);
-    document.getElementById('admin-actions').classList.toggle('hidden', session?.role !== 'admin');
-    document.getElementById('session-name').textContent = session?.username ?? '';
-}
-
 /** Αποθηκεύει (ή σβήνει) τη συνεδρία, ώστε να επιβιώνει ενός refresh. */
 function saveSession() {
     try {
@@ -714,7 +807,6 @@ async function restoreSession() {
         session = null;
     }
     saveSession();
-    applySession();
 }
 
 async function login(event) {
@@ -733,8 +825,7 @@ async function login(event) {
 
         session = { token: result.token, role: result.role, username: result.username };
         saveSession();
-        document.getElementById('login-form').reset();
-        applySession();
+        // Η οθόνη ξαναζωγραφίζεται με τις ενέργειες διαχείρισης.
         navigate('admin');
     } catch (error) {
         loginError.textContent = error.message;
@@ -748,7 +839,6 @@ function logout({ render = true } = {}) {
     editing = null;
     formCategory = null;
     saveSession();
-    applySession();
 
     if (token) {
         fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
@@ -763,17 +853,81 @@ function logout({ render = true } = {}) {
 // απόδοση γίνεται κεντρικά στη route().
 document.addEventListener('click', event => {
     const button = event.target.closest('[data-nav]');
-    if (button) navigate(button.dataset.nav);
+
+    if (!button) {
+        // Κλικ εκτός του πάνελ το κλείνει. Κλικ μέσα του, π.χ. σε πεδίο της
+        // φόρμας σύνδεσης, πρέπει να το αφήνει ανοιχτό.
+        if (!event.target.closest('.submenu')) closeSubmenu();
+        return;
+    }
+
+    const path = button.dataset.nav;
+
+    // Συγκεκριμένη επιλογή: πλοηγούμαστε και κλείνουμε.
+    if (path.includes('/')) {
+        navigate(path);
+        closeSubmenu();
+        return;
+    }
+
+    // Το κουμπί ενότητας μόνο αποκαλύπτει τις επιλογές· η πλοήγηση γίνεται από
+    // αυτές, όπου η πρώτη είναι πάντα το "Όλα". Εξαίρεση η διαχείριση, που δεν
+    // έχει επιλογές: εκεί το κουμπί πρέπει να πλοηγεί, αλλιώς δεν φτάνει κανείς.
+    if (!document.getElementById(`${path}-menu`)) {
+        clearTimeout(hoverTimer);
+        closeSubmenu();
+        navigate(path);
+        return;
+    }
+
+    // Με ποντίκι το πάνελ είναι ήδη ανοιχτό από το hover, οπότε το κλικ δεν
+    // έχει τι να κάνει. Το detail είναι 0 όταν το κουμπί ενεργοποιείται από
+    // πληκτρολόγιο: εκεί, όπως και στην αφή, το κλικ ανοίγει και κλείνει.
+    if (hoverCapable && event.detail > 0) return;
+
+    if (openMenu === path) {
+        closeSubmenu();
+        return;
+    }
+    openSubmenu(path);
 });
 
-document.getElementById('login-form').addEventListener('submit', login);
-document.getElementById('logout-button').addEventListener('click', () => logout());
+/*
+ * Το hover δεν πλοηγεί, μόνο δείχνει τις επιλογές: η αλλαγή σελίδας επειδή
+ * πέρασε από πάνω ο κέρσορας θα ήταν ενοχλητική. Οι μικρές καθυστερήσεις
+ * αποτρέπουν το ανοιγοκλείσιμο όταν ο κέρσορας απλώς διασχίζει τη μπάρα, και
+ * δίνουν χρόνο να φτάσει από το κουμπί στο πάνελ.
+ */
+if (hoverCapable) {
+    document.querySelectorAll('.menu-item').forEach(item => {
+        const toggle = item.querySelector('[aria-controls]');
+
+        item.addEventListener('mouseenter', () => {
+            clearTimeout(hoverTimer);
+            // Η διαχείριση δεν έχει επιλογές: το πέρασμα από πάνω της κλείνει
+            // ό,τι είχε ανοίξει δίπλα.
+            hoverTimer = setTimeout(
+                () => (toggle ? openSubmenu(toggle.dataset.nav) : closeSubmenu()),
+                toggle ? 120 : 220
+            );
+        });
+
+        item.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => closeSubmenu(), 220);
+        });
+    });
+}
+
+document.addEventListener('keydown', event => {
+    // Το Escape κλείνει πρώτα το lightbox· αν δεν είναι ανοιχτό, τις επιλογές.
+    if (event.key === 'Escape' && lightbox.hidden) closeSubmenu({ restoreFocus: true });
+});
 
 window.addEventListener('hashchange', route);
 
 document.getElementById('footer-year').textContent = new Date().getFullYear();
 
-applySession();
 // Πρώτα επαναφέρουμε τη συνεδρία, ώστε μια διεύθυνση όπως #/admin/links να
 // ξέρει ήδη αν ο χρήστης έχει δικαιώματα διαχειριστή.
 restoreSession().finally(route);
