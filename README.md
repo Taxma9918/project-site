@@ -49,6 +49,18 @@ edited and deleted:
   with no thumbnail yet, added through the admin screens, falls back to the full
   image rather than showing a broken icon.
 
+## Design
+
+The page is meant to read as a gallery room: warm paper tones, deep ink for text,
+and a single accent in vermilion, a colour from the painter's own palette. Headings
+are set in a serif, the interface in the reader's system sans.
+
+Both families come from the operating system, so nothing is downloaded. That is a
+requirement rather than a preference: the Content-Security-Policy allows only
+same-origin resources, so a web font service would simply be blocked. Colour,
+spacing, radii and shadows are defined once as custom properties at the top of
+`styles.css`, so the whole palette can be changed from one place.
+
 ## Installation and usage
 
 Requires Node.js 18 or newer.
