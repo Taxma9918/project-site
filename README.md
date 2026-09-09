@@ -43,6 +43,11 @@ edited and deleted:
   focus trap while the lightbox is open.
 - **Loading states**, a favicon, and images with a fixed aspect ratio so the
   layout does not shift as they load.
+- **Light image payload.** The grid loads 500 pixel wide copies from
+  `public/images/thumbs/`, and only the lightbox fetches the full resolution
+  file. That takes the gallery from 940 KB of images down to 193 KB. A painting
+  with no thumbnail yet, added through the admin screens, falls back to the full
+  image rather than showing a broken icon.
 
 ## Installation and usage
 
@@ -121,7 +126,8 @@ public/                Static files, served as-is
   styles.css           Styling (responsive)
   script.js            Frontend logic
   favicon.svg          Browser tab icon
-  images/              Painting images
+  images/              Painting images at full resolution
+    thumbs/            Smaller copies used by the gallery grid
 render.yaml            Deployment blueprint for Render
 .github/workflows/     Continuous integration: lint, tests, production boot
 docs/screenshots/      Images used by this README

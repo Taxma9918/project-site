@@ -159,6 +159,21 @@ const PAINTING_TITLES = {
     portraits: 'Πορτρέτα του Ντελακρουά'
 };
 
+/** Η διαδρομή της πλήρους εικόνας ενός έργου. */
+function fullImageUrl(image) {
+    return `images/${encodeURIComponent(image)}`;
+}
+
+/**
+ * Η διαδρομή της μικρογραφίας. Οι μικρογραφίες είναι πάντα JPEG, οπότε η
+ * κατάληξη αντικαθίσταται: με X-Content-Type-Options: nosniff μια λάθος
+ * δηλωμένη μορφή δεν θα εμφανιζόταν καθόλου.
+ */
+function thumbImageUrl(image) {
+    const jpeg = image.replace(/\.[^.]+$/, '.jpg');
+    return `images/thumbs/${encodeURIComponent(jpeg)}`;
+}
+
 /** Τα δευτερεύοντα στοιχεία ενός έργου, όσα από αυτά έχουν συμπληρωθεί. */
 function paintingDetails(painting) {
     return [painting.year, painting.technique, painting.museum].filter(Boolean);
@@ -185,7 +200,8 @@ async function showPaintings(category) {
                     <figure class="painting-card">
                         <button type="button" class="painting-open" data-painting="${esc(painting.id)}"
                                 aria-label="Μεγέθυνση: ${esc(painting.title)}">
-                            <img src="images/${encodeURIComponent(painting.image)}"
+                            <img src="${esc(thumbImageUrl(painting.image))}"
+                                 data-full="${esc(fullImageUrl(painting.image))}"
                                  alt="${esc(painting.title)}" loading="lazy" decoding="async">
                         </button>
                         <figcaption>
@@ -201,6 +217,14 @@ async function showPaintings(category) {
         `;
 
         wireFilter('.painting-card');
+
+        // Ένα έργο που προστέθηκε από τη διαχείριση δεν έχει ακόμη μικρογραφία:
+        // αντί για σπασμένο εικονίδιο, δείχνουμε την πλήρη εικόνα.
+        mainContent.querySelectorAll('.painting-card img').forEach(image =>
+            image.addEventListener('error', () => {
+                if (image.dataset.full) image.src = image.dataset.full;
+            }, { once: true }));
+
         mainContent.querySelectorAll('.painting-open').forEach(button =>
             button.addEventListener('click', () => {
                 const painting = loadedPaintings.find(p => String(p.id) === button.dataset.painting);
@@ -224,7 +248,8 @@ let lightboxOpener = null;
 
 function openLightbox(painting) {
     lightboxOpener = document.activeElement;
-    lightboxImage.src = `images/${encodeURIComponent(painting.image)}`;
+    // Στη μεγέθυνση θέλουμε την πλήρη ανάλυση, όχι τη μικρογραφία.
+    lightboxImage.src = fullImageUrl(painting.image);
     lightboxImage.alt = painting.title;
     lightboxCaption.textContent = [painting.title, ...paintingDetails(painting)].join(' · ');
     lightbox.hidden = false;
