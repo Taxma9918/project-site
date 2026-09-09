@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Επιτρέπει και χειροκίνητη εκτέλεση από την καρτέλα Actions.
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Ο test runner επεκτείνει μόνος του το glob, κάτι που θέλει Node 21+.
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Επιβεβαιώνει ότι ο server σηκώνεται και με μόνο τις runtime εξαρτήσεις,
+      # όπως θα γίνει στην ανάπτυξη· διαφορετικά ένα λάθος require θα φαινόταν
+      # μόνο μετά το deploy.
+      - name: Verify a production install boots
+        run: |
+          rm -rf node_modules
+          npm ci --omit=dev
+          PORT=3999 node server.js &
+          for i in $(seq 1 20); do
+            sleep 0.5
+            curl -sf http://localhost:3999/api/paintings > /dev/null && break
+          done
+          curl -sf http://localhost:3999/ > /dev/null
+          curl -sf http://localhost:3999/api/biography > /dev/null
+          echo "η εφαρμογή απαντά με μόνο τις runtime εξαρτήσεις"

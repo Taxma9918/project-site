@@ -1,5 +1,7 @@
 # Eugène Delacroix Web Application
 
+[![CI](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml/badge.svg)](https://github.com/Taxma9918/project-site/actions/workflows/ci.yml)
+
 A web application about the painter Eugène Delacroix (1798–1863), featuring a
 biography, a gallery of paintings, exhibitions and reference links. Exhibitions
 and links are managed from inside the application by an administrator (CRUD).
@@ -8,6 +10,22 @@ and links are managed from inside the application by an administrator (CRUD).
 JSON files for storage.
 
 > The user interface and the source-code comments are written in Greek.
+
+## Screens
+
+The gallery, grouped by category, with the search box and each work shown with
+its year, technique and museum:
+
+![The gallery of paintings](docs/screenshots/gallery.jpg)
+
+Clicking a painting opens it at full size, with its caption:
+
+![A painting open in the lightbox](docs/screenshots/lightbox.jpg)
+
+The administrator screens, where paintings, exhibitions and links are created,
+edited and deleted:
+
+![The painting management screen](docs/screenshots/admin.jpg)
 
 ## Interface
 
@@ -105,6 +123,8 @@ public/                Static files, served as-is
   favicon.svg          Browser tab icon
   images/              Painting images
 render.yaml            Deployment blueprint for Render
+.github/workflows/     Continuous integration: lint, tests, production boot
+docs/screenshots/      Images used by this README
 scripts/
   hash-password.js     Generates an entry for data/users.json
 test/                  Test suite (node:test)
@@ -242,3 +262,10 @@ folder is rewritten from the repository on every restart and redeploy, and
 anything added through the admin screens disappears. For a demo that is usually
 fine; making it permanent means replacing the JSON files with a real database,
 or mounting a persistent disk at `data/`, which needs a paid plan.
+
+## Licence and credits
+
+The source code is released under the ISC licence; see `LICENSE`.
+
+The paintings in `public/images/` are works by Eugène Delacroix (1798-1863) and
+are in the public domain. The files come from Wikimedia Commons.
